@@ -46,8 +46,8 @@ test:             ## unit suite, no services needed
 integration:      ## scripted turns against the live stack (make stack first), no model
 	uv run pytest -q -p no:tach -m "integration and not llm"
 
-bench:            ## the ontology A/B (BENCH.md) on the real model; R=2 repeats, RESUME=reports/ab-….jsonl to continue
-	uv run python tests/benchmark/deeptrack/ab.py --repeats $(or $(R),2) $(if $(RESUME),--resume $(RESUME),)
+bench:            ## the ontology A/B (BENCH.md) on the real model; R=2 repeats, ARMS="full prevalidate", RESUME=reports/ab-….jsonl to continue
+	uv run python tests/benchmark/deeptrack/ab.py --repeats $(or $(R),2) $(if $(ARMS),--arms $(ARMS),) $(if $(RESUME),--resume $(RESUME),)
 
 questions:        ## PREGUNTAS.md on the real model and the live stack — structural assertions
 	uv run pytest -q -p no:tach -m llm -rA

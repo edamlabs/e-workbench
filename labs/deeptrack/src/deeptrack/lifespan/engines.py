@@ -16,6 +16,9 @@ VALIDATIONS: Final[Mapping[Arm, Callable[[ProvidersState], ShaclValidation]]] = 
         Arm.FULL: lambda mounted: ShaclEngine(
             mounted.ontology.validation, base=st.ontology.texts, shapes=st.ontology.shapes_text
         ),
+        Arm.PREVALIDATE: lambda mounted: ShaclEngine(
+            mounted.ontology.validation, base=st.ontology.texts, shapes=st.ontology.shapes_text
+        ),
         Arm.NO_ONTOLOGIST: lambda mounted: ShaclEngine(
             mounted.ontology.validation, base=st.ontology.texts, shapes=st.ontology.shapes_text
         ),

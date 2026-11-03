@@ -14,8 +14,14 @@ from infra.state import State
 
 
 def chat(mounted: ProvidersState, engines: EnginesState, arm: Arm) -> ChatService:
-    """The chat service of one arm: the ontologist only in `full`, the guard in every arm."""
-    agent = InsuranceAgent(mounted.chat.model, mounted.ontology.reference, ontologist=arm is Arm.FULL).build()
+    """The chat service of one arm: the ontologist in `full` and `prevalidate`, the in-tool validation only in
+    `prevalidate`, the guard in every arm."""
+    agent = InsuranceAgent(
+        mounted.chat.model,
+        mounted.ontology.reference,
+        ontologist=arm in {Arm.FULL, Arm.PREVALIDATE},
+        validator=engines.shacl if arm is Arm.PREVALIDATE else None,
+    ).build()
     graph = ChatGraph(agent, ShaclGate(engines.shacl), InputGuard(mounted.classify)).build(InMemorySaver())
     return ChatService(graph, mounted.trace, mounted.ontology.names)
 

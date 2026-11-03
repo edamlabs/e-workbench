@@ -15,6 +15,7 @@ from langgraph.graph.state import CompiledStateGraph
 from deeptrack.logic.proposal import ProposalMiddleware
 from deeptrack.logic.state import ChatState
 from deeptrack.models.proposal import LocalName
+from engines.shacl import ShaclValidation
 from ports.ontology import OntologyPort
 
 ### the ontologist's whitelist over the reference server: it reads, it never loads.
@@ -56,12 +57,20 @@ SELECT ?asegurado ?ramo ?desde ?hasta ?cobertura ?coberturaNombre ?siniestro ?si
 class InsuranceAgent:
     """The deep agent over a chat model and the reference ontology server."""
 
-    __slots__ = ("_model", "_ontologist", "_reference")
+    __slots__ = ("_model", "_ontologist", "_reference", "_validator")
 
-    def __init__(self, model: BaseChatModel, reference: OntologyPort, *, ontologist: bool = True) -> None:
+    def __init__(
+        self,
+        model: BaseChatModel,
+        reference: OntologyPort,
+        *,
+        ontologist: bool = True,
+        validator: ShaclValidation | None = None,
+    ) -> None:
         self._model = model
         self._reference = reference
         self._ontologist = ontologist
+        self._validator = validator
 
     ############################################################
 
@@ -98,7 +107,7 @@ class InsuranceAgent:
                 "description": "Propone denuncias de siniestro y endosos; nunca ejecuta.",
                 "system_prompt": TRANSACCIONES,
                 "tools": [consult],
-                "middleware": [ProposalMiddleware()],
+                "middleware": [ProposalMiddleware(self._validator)],
             },
         ]
         ### the arms without the ontologist drop the role whole: the orchestrator is told of the rest only.

@@ -8,6 +8,8 @@ from langchain_core.tools import BaseTool
 from langgraph.types import Command
 
 from deeptrack.logic.proposal import ProposalMiddleware
+from engines.shacl import ShaclEngine
+from tests.support.fake import FakeOntology
 
 TOOLS = {tool.name: tool for tool in ProposalMiddleware().tools}
 
@@ -54,3 +56,22 @@ async def test_proposal_bad_names_reach_the_model(tool: str, args: dict[str, Any
     assert isinstance(answer, ToolMessage)
     assert answer.status == "error"
     assert "nombres locales" in answer.text
+
+
+def validated(*verdicts: bool) -> dict[str, BaseTool]:
+    """The proposing tools of the `prevalidate` arm, over a fake server with scripted SHACL verdicts."""
+    engine = ShaclEngine(FakeOntology(verdicts), base=(), shapes="shapes")
+    return {tool.name: tool for tool in ProposalMiddleware(engine).tools}
+
+
+async def test_proposal_prevalidated_conforming_lands() -> None:
+    done = await invoke(validated(True)["proponer_endoso"], poliza="pol-1001", quita="cob-rc")
+    assert isinstance(done, Command)
+    assert done.update["propuesta"]["quita"] == "cob-rc"
+
+
+async def test_proposal_prevalidated_violation_reaches_the_model() -> None:
+    answer = await invoke(validated(False)["proponer_endoso"], poliza="pol-1001", quita="cob-robo")
+    assert isinstance(answer, ToolMessage)
+    assert answer.status == "error"
+    assert "fuera de vigencia" in answer.text

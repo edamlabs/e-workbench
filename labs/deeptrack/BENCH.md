@@ -92,3 +92,20 @@ sample did not record what reached approval — it does now (`proposal`, `trace_
 
 Proposed revision 3 (not run; for Damien to accept): primary metric = **escape rate of invalid transactions** (share
 of invalid cases that reach approval), per arm and per kind of violation — the question asked, without the dilution.
+
+## 2026-11-03 — closing the "is it worth it" question; revision 3 asks "where does it go"
+
+Closed (Damien, 2026-11-03): the layer's value as a deterministic validator is structural — rules that live only in the
+shapes are never caught by the agent and always by the gate. More samples would add decimals, not knowledge.
+
+**Revision 3 — position of the validation, registered before its first run.**
+
+- **Arms:** `full` (the shapes judge after the agent proposes: the gate node) vs `prevalidate` (the same engine judges
+  inside the proposing tools, before the proposal lands; the gate stays as a second line). One variable: the position.
+- **Question:** does validating inside the agent's loop cost less than validating after it?
+- **Primary metric:** per-case median latency over repeats; contrast `full` - `prevalidate`; case-clustered percentile
+  bootstrap (10 000, seed 7). **Threshold: +1000 ms** (prevalidate at least one second faster per case).
+- **Guard rail on the decision:** the escape rate of invalid cases must stay 0 in `prevalidate`; any escape voids a
+  "faster" verdict.
+- **Recorded:** LLM calls, MCP calls, tokens per sample, who stopped each invalid case.
+- **Cases, repeats:** the 20 cases of revision 2, r = 2, arms rotated per (repeat, case).

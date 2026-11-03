@@ -26,12 +26,31 @@ from processors.models import EventKind, EventPhase, RunEvent
 
 HERE: Final[Path] = Path(__file__).parent
 REPORTS: Final[Path] = HERE.parents[2] / "reports"
-THRESHOLD: Final[float] = 0.20
 RESAMPLES: Final[int] = 10_000
 WARMUP: Final[str] = "¿Qué coberturas tiene la póliza pol-2002?"
 PROPOSING: Final[frozenset[str]] = frozenset({"proponer_denuncia", "proponer_endoso"})
 CONSOLE: Final[Console] = Console(highlight=False)
 VERSIONS: Final[tuple[str, ...]] = ("deepagents", "langgraph", "langchain-google-genai", "langfuse")
+
+
+@dataclass(frozen=True, slots=True)
+class Contrast:
+    """One pre-registered comparison: a - b of `metric` per case, against `threshold`; `decided` or only reported."""
+
+    name: str
+    a: Arm
+    b: Arm
+    metric: str
+    threshold: float
+    decided: bool
+
+
+### BENCH.md: H1 (revisions 1 and 2), its secondary, and revision 3 (the position of the validation).
+CONTRASTS: Final[tuple[Contrast, ...]] = (
+    Contrast("H1 · the ontology layer", Arm.FULL, Arm.NO_ONTOLOGY, "correct", 0.20, decided=True),
+    Contrast("H1 secondary · the ontologist", Arm.FULL, Arm.NO_ONTOLOGIST, "correct", 0.20, decided=False),
+    Contrast("R3 · validate inside the loop", Arm.FULL, Arm.PREVALIDATE, "latency_ms", 1000.0, decided=True),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,17 +91,17 @@ class Sample:
 class AbBench:
     """The schedule, the judging of one sample, and the summary."""
 
-    __slots__ = ("_cases", "_out", "_repeats")
+    __slots__ = ("_arms", "_cases", "_out", "_repeats")
 
-    def __init__(self, cases: tuple[Case, ...], repeats: int, out: Path) -> None:
+    def __init__(self, cases: tuple[Case, ...], repeats: int, out: Path, arms: tuple[Arm, ...] = tuple(Arm)) -> None:
         self._cases = cases
         self._repeats = repeats
         self._out = out
+        self._arms = arms
 
     @staticmethod
-    def _run_order(repeat: int, index: int) -> tuple[Arm, ...]:
-        """The three arms rotated by (repeat + case index): every arm runs first, second and third equally often."""
-        arms = tuple(Arm)
+    def _run_order(repeat: int, index: int, arms: tuple[Arm, ...]) -> tuple[Arm, ...]:
+        """The arms rotated by (repeat + case index): every arm runs in every position equally often."""
         shift = (repeat + index) % len(arms)
         return arms[shift:] + arms[:shift]
 
@@ -163,13 +182,13 @@ class AbBench:
         written = self.done()
         async with lifespan() as state:
             mounted = state.providers
-            chats = {arm: services.chat(mounted, engines.built(mounted, arm), arm) for arm in Arm}
-            [await chats[arm].turn(f"warmup-{arm}-{time.time_ns()}", WARMUP, lambda _: None) for arm in Arm]
+            chats = {arm: services.chat(mounted, engines.built(mounted, arm), arm) for arm in self._arms}
+            [await chats[arm].turn(f"warmup-{arm}-{time.time_ns()}", WARMUP, lambda _: None) for arm in self._arms]
             schedule = [
                 (repeat, case, arm)
                 for repeat in range(self._repeats)
                 for index, case in enumerate(self._cases)
-                for arm in self._run_order(repeat, index)
+                for arm in self._run_order(repeat, index, self._arms)
                 if (str(arm), case.id, repeat) not in written
             ]
             fresh = [
@@ -187,21 +206,19 @@ class AbSummary:
     def __init__(self, samples: list[Sample]) -> None:
         self._samples = [each for each in samples if each.correct is not None]
 
-    def _clusters(self, a: str, b: str) -> np.ndarray:
-        """Per-case mean difference a - b of correctness over the repeats both arms judged: one value per case.
+    def _clusters(self, a: str, b: str, metric: str = "correct") -> np.ndarray:
+        """One value per case: a - b of the per-case statistic — mean correctness, or median latency over repeats.
 
         Outcomes repeat almost exactly within a case, so the case is the independent unit (BENCH.md, revision 2)."""
-        by = {(s.arm, s.case, s.repeat): float(bool(s.correct)) for s in self._samples}
-        cases = sorted({case for arm, case, _ in by if arm == a})
-        diffs = [
-            [
-                by[(a, case, repeat)] - by[(b, case, repeat)]
-                for arm, c, repeat in by
-                if arm == a and c == case and (b, case, repeat) in by
-            ]
-            for case in cases
-        ]
-        return np.array([float(np.mean(each)) for each in diffs if each])
+        reduce = np.median if metric == "latency_ms" else np.mean
+        value = (lambda s: s.latency_ms) if metric == "latency_ms" else (lambda s: float(bool(s.correct)))
+        per = {
+            (arm, case): [value(s) for s in self._samples if s.arm == arm and s.case == case]
+            for arm in (a, b)
+            for case in {s.case for s in self._samples}
+        }
+        cases = sorted(case for (arm, case), values in per.items() if arm == a and values and per[(b, case)])
+        return np.array([float(reduce(per[(a, case)]) - reduce(per[(b, case)])) for case in cases])
 
     @staticmethod
     def _interval(diffs: np.ndarray) -> tuple[float, float, float]:
@@ -211,14 +228,31 @@ class AbSummary:
         return float(diffs.mean()), float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
 
     @staticmethod
-    def _verdict(low: float, high: float) -> str:
-        match (low > THRESHOLD, high < THRESHOLD):
+    def _verdict(low: float, high: float, threshold: float) -> str:
+        match (low > threshold, high < threshold):
             case (True, _):
-                return f"**worth it** — the whole interval is above +{THRESHOLD:.2f}"
+                return f"**holds** — the whole interval is above +{threshold:g}"
             case (_, True):
-                return f"**not worth it at this threshold** — the whole interval is below +{THRESHOLD:.2f}"
+                return f"**does not hold** — the whole interval is below +{threshold:g}"
             case _:
-                return f"**undecided at this n** — the interval crosses +{THRESHOLD:.2f}"
+                return f"**undecided at this n** — the interval crosses +{threshold:g}"
+
+    def _contrast(self, contrast: Contrast) -> list[str]:
+        """One contrast's lines, when both of its arms ran."""
+        clusters = self._clusters(contrast.a, contrast.b, contrast.metric)
+        match clusters.size:
+            case 0:
+                return []
+            case _:
+                mean, low, high = self._interval(clusters)
+                verdict = (
+                    self._verdict(low, high, contrast.threshold) if contrast.decided else "reported, not decided on"
+                )
+                line = (
+                    f"- **{contrast.name}** — `{contrast.a}` - `{contrast.b}` on {contrast.metric}: {mean:+.2f}, "
+                    f"95 % case-clustered [{low:+.2f}, {high:+.2f}] over {clusters.size} cases → {verdict}."
+                )
+                return [line]
 
     def _arm_accuracy(self, arm: Arm, kind: str) -> float:
         judged = [float(bool(s.correct)) for s in self._samples if s.arm == arm and kind in ("all", s.kind)]
@@ -242,16 +276,18 @@ class AbSummary:
             f"| `{arm}` | "
             + " | ".join(str(sum(1 for s in invalid if s.arm == arm and s.stopped_by == n)) for n in names)
             + " |"
-            for arm in Arm
+            for arm in self._arms
         ]
+
+    @property
+    def _arms(self) -> tuple[Arm, ...]:
+        ran = {s.arm for s in self._samples}
+        return tuple(arm for arm in Arm if arm in ran)
 
     ############################################################
 
     def markdown(self, raw: Path, failed: int) -> str:
         """The report: decision first, then everything recorded."""
-        h1 = self._clusters(Arm.FULL, Arm.NO_ONTOLOGY)
-        h2 = self._clusters(Arm.FULL, Arm.NO_ONTOLOGIST)
-        (m1, l1, u1), (m2, l2, u2) = self._interval(h1), self._interval(h2)
         versions = ", ".join(f"{name} {importlib.metadata.version(name)}" for name in VERSIONS)
         lines = [
             f"# Ontology A/B — {datetime.now(UTC):%Y-%m-%d %H:%M} UTC",
@@ -259,17 +295,15 @@ class AbSummary:
             f"Pre-registration: `BENCH.md`. Raw samples: `{raw.name}`. Excluded (infrastructure failures): {failed}.",
             f"Chat {st.providers.drivers.chat.gemini.ref} · guard {st.providers.drivers.classify.gemini.ref} · {versions}.",
             "",
-            "## Decision (H1: full - no_ontology > +0.20)",
+            "## Contrasts (pre-registered in BENCH.md)",
             "",
-            f"Mean difference **{m1:+.2f}**, 95 % case-clustered interval [{l1:+.2f}, {u1:+.2f}] over {h1.size} cases → {self._verdict(l1, u1)}.",
-            "",
-            f"Secondary, not decided on — full - no_ontologist: {m2:+.2f} [{l2:+.2f}, {u2:+.2f}] over {h2.size} cases.",
+            *(line for contrast in CONTRASTS for line in self._contrast(contrast)),
             "",
             "## Arms",
             "",
             "| Arm | n | correct | valid | invalid | p50 ms | p95 ms | tokens in | tokens out | LLM calls | MCP calls |",
             "|---|---|---|---|---|---|---|---|---|---|---|",
-            *(self._arm_row(arm) for arm in Arm),
+            *(self._arm_row(arm) for arm in self._arms),
             "",
             "## Who stopped the invalid cases (samples)",
             "",
@@ -285,12 +319,12 @@ app = App(name="ab", help="The ontology A/B bench (BENCH.md).")
 
 
 @app.default
-async def bench(repeats: int = 2, resume: Path | None = None) -> None:
-    """Run the bench; `--resume reports/ab-….jsonl` continues a run that died."""
+async def bench(repeats: int = 2, arms: tuple[Arm, ...] = tuple(Arm), resume: Path | None = None) -> None:
+    """Run the bench on `--arms`; `--resume reports/ab-….jsonl` continues a run that died."""
     REPORTS.mkdir(exist_ok=True)
     raw = resume or REPORTS / f"ab-{datetime.now(UTC):%Y%m%dT%H%M%S}.jsonl"
     cases = tuple(Case(**each) for each in json.loads((HERE / "cases.json").read_text()))
-    samples = await AbBench(cases, repeats, raw).run()
+    samples = await AbBench(cases, repeats, raw, arms).run()
     failed = sum(1 for each in samples if each.correct is None)
     summary = raw.with_suffix(".md")
     summary.write_text(AbSummary(samples).markdown(raw, failed))
