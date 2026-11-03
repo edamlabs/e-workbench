@@ -45,3 +45,15 @@ calls per sample.
 - Warm-up: one discarded turn per arm before the first measured one.
 - Each sample is a fresh thread. Model: Gemini 2.5 Flash (chat), Gemini 3.5 Flash-Lite (guard), API defaults.
 - Raw samples: `reports/ab-<timestamp>.jsonl`; summary beside it. Versions and date in the summary.
+
+## 2026-11-03 — pilot result, and a protocol revision (made after seeing it, so declared as such)
+
+Pilot r = 3, 63 samples, 0 failures (`reports/ab-20261103T123130.*`, not committed). Pre-registered decision:
+`full` - `no_ontology` = +0.43, 95 % [+0.24, +0.62] over 21 pairs → worth it.
+
+Validity flag: outcomes are near-deterministic within a case (repeats agree), so the 21 pairs are 7 clusters, not 21
+independent samples. The case-clustered bootstrap gives +0.43, 95 % [+0.14, +0.86] — it crosses +0.20. The pairs
+interval is too narrow for this design.
+
+Revision for the next run (new pre-registration): resample by case (cluster bootstrap), and grow the case set to at
+least 20 transaction cases — n comes from the cases, not from the repeats; r = 2 is enough to catch flakiness.
