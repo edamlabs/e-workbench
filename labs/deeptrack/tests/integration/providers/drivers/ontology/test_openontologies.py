@@ -55,6 +55,14 @@ async def test_openontologies_reconnects_and_reseeds() -> None:
 async def test_openontologies_refuses_replay_of_writes() -> None:
     async with OpenOntologiesDriver(SERVERS.val_url) as validation:
         await restart("labs-ontoval")
-        with pytest.raises(OntologyError, match="restarted during onto_load"):
+        with pytest.raises(OntologyError, match="lost during onto_load"):
             await validation.call("onto_load", {"turtle": st.ontology.texts[0]})
         assert await validation.health()
+
+
+async def test_openontologies_agent_tool_reports_failure() -> None:
+    async with OpenOntologiesDriver(SERVERS.ref_url, seed=st.ontology.texts) as reference:
+        await restart("labs-ontoref")
+        answer = await reference.tools["onto_load"].ainvoke({"turtle": st.ontology.texts[0]})
+        assert "lost during onto_load" in str(answer)
+        assert "true" in (await reference.call("onto_query", {"query": ASK})).lower()
