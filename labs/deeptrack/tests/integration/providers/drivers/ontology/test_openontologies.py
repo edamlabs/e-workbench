@@ -1,4 +1,6 @@
-"""OpenOntologiesDriver against the lab's two servers: whitelists, refusal, health, an unreachable server."""
+"""OpenOntologiesDriver against the lab's two servers: whitelists, refusal, health, unreachable, restarted."""
+
+import asyncio
 
 import pytest
 
@@ -8,6 +10,7 @@ from providers.drivers.ontology.openontologies import OpenOntologiesDriver
 
 pytestmark = pytest.mark.integration
 SERVERS = st.providers.drivers.ontology.openontologies
+ASK = "ASK { <https://deeptrack.lab/seguros#pol-1001> ?p ?o }"
 
 
 async def test_openontologies_whitelists() -> None:
@@ -25,7 +28,7 @@ async def test_openontologies_refuses_unadvertised() -> None:
 
 async def test_openontologies_seed_is_queryable() -> None:
     async with OpenOntologiesDriver(SERVERS.ref_url, seed=st.ontology.texts) as reference:
-        answer = await reference.call("onto_query", {"query": "ASK { <https://deeptrack.lab/seguros#pol-1001> ?p ?o }"})
+        answer = await reference.call("onto_query", {"query": ASK})
     assert "true" in answer.lower()
 
 
@@ -33,3 +36,25 @@ async def test_openontologies_unreachable() -> None:
     with pytest.raises(OntologyError, match="cannot open a session"):
         async with OpenOntologiesDriver("http://localhost:28199/mcp"):
             pass
+
+
+async def restart(container: str) -> None:
+    """Restart one of the lab's containers and wait until its MCP endpoint answers again."""
+    process = await asyncio.create_subprocess_exec("docker", "restart", container, stdout=asyncio.subprocess.DEVNULL)
+    await process.wait()
+    await asyncio.sleep(2)
+
+
+async def test_openontologies_reconnects_and_reseeds() -> None:
+    async with OpenOntologiesDriver(SERVERS.ref_url, seed=st.ontology.texts) as reference:
+        await restart("labs-ontoref")
+        answer = await reference.call("onto_query", {"query": ASK})
+    assert "true" in answer.lower()
+
+
+async def test_openontologies_refuses_replay_of_writes() -> None:
+    async with OpenOntologiesDriver(SERVERS.val_url) as validation:
+        await restart("labs-ontoval")
+        with pytest.raises(OntologyError, match="restarted during onto_load"):
+            await validation.call("onto_load", {"turtle": st.ontology.texts[0]})
+        assert await validation.health()
