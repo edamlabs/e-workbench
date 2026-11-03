@@ -12,6 +12,14 @@ milestones it has reached.
 ### Added
 
 - `labs/`: the home of experiments bound sooner or later for production or another project.
+- `labs/deeptrack` (`TODO_deeptrack`): an insurance deep agent (orchestrator + ontologist, queries, transactions)
+  over two Open Ontologies MCP servers, with a deterministic SHACL gate, a human approval interrupt, an enum input
+  guard in parallel with the agent, Gemini over its API key, live `RunEvent` frames and Langfuse v4, an AG-UI server
+  and a CopilotKit UI — all in one lab stack (`labs-*`, ports 28100–28199). House taxonomy (ports, drivers, engine,
+  processor, layered lifespans), 71 unit · 21 integration · 15 real-model tests. A pre-registered A/B
+  (`labs/deeptrack/BENCH.md`, 3 revisions): the shapes catch every violation the agent cannot read (0/12 without
+  them); after the agent is the right position; the ontologist adds nothing on this domain. Langfuse audit moved
+  to `TODO_events`.
 - Fleet (`TODO_jev`): `e-jev` onboarded (`edamlabs/e-jev`, service · eager, moved from `damvolkov` on 2026-10-28) with
   `deps`, `drift` and `community`; its manifest declares `[tool.edamlabs]` and `drift` reports ok.
   `security`, `docs` and `release` stay off until the repo carries workflows and a docs site — its image is

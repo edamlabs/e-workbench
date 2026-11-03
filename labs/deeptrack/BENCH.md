@@ -109,3 +109,22 @@ shapes are never caught by the agent and always by the gate. More samples would 
   "faster" verdict.
 - **Recorded:** LLM calls, MCP calls, tokens per sample, who stopped each invalid case.
 - **Cases, repeats:** the 20 cases of revision 2, r = 2, arms rotated per (repeat, case).
+
+## 2026-11-03 — revision 3, result — and the bench closes
+
+80 samples, 0 failures (`reports/ab-20261103T135150.*`, not committed). `full` - `prevalidate` on per-case median
+latency: -1045 ms, case-clustered 95 % [-3289, +681] → **does not hold**: validating inside the loop is not faster —
+p95 16.1 s vs 7.5 s (in-tool errors make the agent loop more), MCP calls 6.9 vs 4.5 (the gate judges again).
+
+Guard rail voided anyway: one invalid case escaped in `prevalidate` (`i-not-covered-2002-rc`, trace
+`f8233d516e591f0ffd94d471c70ae380`). The user asked for an RC claim on a policy without RC; the agent replaced the
+coverage with `cob-incendio`, which the policy does cover — a proposal the shapes rightly accept. Not a validation
+failure: an **intent** failure (the proposal is not what was asked), invisible to SHACL in any position; the human
+approval card is what catches it today. It also explains revision 2's lone `full` failure.
+
+Conclusions:
+- The ontology layer earns its place as a deterministic validator of the rules that live only in the shapes.
+- After the agent (the gate node) is the right position here: no slower, fewer calls, simpler loop.
+- The ontologist subagent adds nothing measurable on a 7-class ontology; to be re-asked only on a domain the model
+  cannot guess.
+- Open risk, not an ontology question: intent fidelity — proposal ≠ request.
