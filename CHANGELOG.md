@@ -12,6 +12,15 @@ milestones it has reached.
 ### Added
 
 - `labs/`: the home of experiments bound sooner or later for production or another project.
+- `labs/etrack` (`TODO_etrack`): e-track, a framework-agnostic run tracking library on the e-arkhetypo library stack —
+  one `RunEvent` model (13 kinds with a `custom` fallback, five phases, typed delta parts incl. reasoning) carried by
+  a structlog channel of its own, fanned out by a bounded anyio bus to parallel sinks that each read their own view:
+  OTLP spans and logs with run-derived W3C ids (GenAI, OpenInference and Langfuse attributes), a live per-thread
+  replay buffer. LangGraph/deepagents enter through a callback source; a topology adapter and a layout processor
+  map the declared graph. 271 unit tests, 98.7 % coverage; not published, not yet imported by deeptrack.
+- `labs/etrack` proven (`TODO_sandbox`): 100 % line and branch coverage over in-process fakes (a fake OTLP/HTTP collector
+  decoding the real protobuf); a compose sandbox (one OTel Collector, file out) and an e2e tier that runs a deep agent
+  into it — it caught LangChain objects breaking the OTLP sink, now encoded by that driver through e-serde.
 - Fleet (`TODO_jev`): `e-jev` onboarded (`edamlabs/e-jev`, service · eager, moved from `damvolkov` on 2026-10-28) with
   `deps`, `drift` and `community`; its manifest declares `[tool.edamlabs]` and `drift` reports ok.
   `security`, `docs` and `release` stay off until the repo carries workflows and a docs site — its image is

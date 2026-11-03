@@ -1,0 +1,17 @@
+##### THE E2E SANDBOX — the minimal stack etrack exports to: one OpenTelemetry Collector #####
+### what it receives is written to ./.sandbox (git-ignored) as OTLP/JSON, read back by the integration tier.
+name: labs-etrack
+
+services:
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    container_name: labs-etrack-collector
+    ### the host user, so the files it writes in the bind mount are the tests' to read and the host's to delete.
+    user: "${SANDBOX_UID:-1000}:${SANDBOX_GID:-1000}"
+    command: ["--config=/etc/otelcol/collector.yaml"]
+    volumes:
+      - ./sandbox/collector.yaml:/etc/otelcol/collector.yaml:ro
+      - ./.sandbox:/out
+    ports:
+      - "127.0.0.1:28120:4318"
+      - "127.0.0.1:28121:13133"

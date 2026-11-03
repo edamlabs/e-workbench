@@ -1,0 +1,190 @@
+##### BUILD #####
+[build-system]
+requires = ["hatchling>=1.32", "uv-dynamic-versioning>=0.14.1"]
+build-backend = "hatchling.build"
+
+##### PROJECT #####
+[project]
+name = "e-track"
+dynamic = ["version"]
+description = "Run tracking for agent systems: one event model carried by a structlog channel, many parallel sinks (OTLP, live)."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+authors = [{ name = "damvolkov", email = "damvolkovv@gmail.com" }]
+keywords = ["e-stack", "tracing", "langgraph", "opentelemetry", "structlog", "agents"]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    ##### the contract and the channel #####
+    "msgspec>=0.21",
+    "structlog>=26.1",
+    ##### the bus #####
+    "anyio>=4.6",
+    ##### config #####
+    "pydantic-settings>=2.6",
+    ##### contracts #####
+    "beartype>=0.22.9",
+]
+
+[project.optional-dependencies]
+##### sources — LangGraph runs (deepagents included) through LangChain callbacks #####
+langgraph = ["langchain-core>=1.5.2", "langgraph>=1.2.7"]
+##### sinks — OTLP spans and logs (Langfuse, LangSmith, Tempo, Phoenix, any collector) #####
+otel = ["opentelemetry-sdk>=1.44", "opentelemetry-exporter-otlp-proto-http>=1.44", "e-serde>=0.6.2"]
+##### topology layout — Rust-backed graph algorithms #####
+topology = ["rustworkx>=0.17"]
+all = ["e-track[langgraph,otel,topology]"]
+
+[project.urls]
+Homepage = "https://github.com/damvolkov/e-track"
+Source = "https://github.com/damvolkov/e-track"
+Issues = "https://github.com/damvolkov/e-track/issues"
+
+##### DEPS #####
+[dependency-groups]
+lint = [
+    "ruff>=0.16",
+    "ty>=0.0.75",
+    "tach>=0.35",
+    "validate-pyproject[all]>=0.26",
+    "zizmor>=1.25",
+]
+test = [
+    "pytest>=9.1",
+    "pytest-asyncio>=1.4",
+    "pytest-cov>=7.1",
+    "pytest-xdist[psutil]>=3.8",
+    "pytest-randomly>=5.0",
+    "pytest-timeout>=2.4",
+    ### the graph tests build real LangGraph graphs, deep-agent shaped, on a scripted chat model.
+    "deepagents>=0.7.0",
+    ### the fake collector: a real localhost HTTP server the OTLP exporter posts to.
+    "pytest-httpserver>=1.2.0",
+]
+docs = [
+    "mkdocstrings[python]>=1.0.7",
+    "zensical>=0.0.70",
+]
+dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+    { include-group = "docs" },
+    "prek>=0.4",
+    "e-track[all]",
+]
+
+[tool.uv]
+required-version = ">=0.12"
+default-groups = ["dev"]
+exclude-newer = "2026-10-20"
+### e-serde is first-party (the house JSON encoder): exempt from the freshness window.
+exclude-newer-package = { "e-serde" = "2100-01-01T00:00:00Z" }
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
+
+##### VERSION #####
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+fallback-version = "0.0.0"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/etrack"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "tests/"]
+
+##### LINT #####
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "F", "E", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T10", "T20", "EM", "ISC",
+    "PIE", "PT", "RET", "SIM", "TID", "TC", "ARG", "PTH", "PL", "PERF", "FURB",
+    "ASYNC", "S", "BLE", "FBT", "LOG", "G", "RUF",
+]
+ignore = ["E501", "ISC001", "PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S106", "PLR2004", "ARG", "FBT", "TID251"]
+### the one module per foreign framework: an upgrade of that framework touches it alone.
+### LangChain's callback signatures are the interface: their unused arguments are part of it.
+"src/etrack/providers/adapters/source/langgraph.py" = ["TID251", "ARG002"]
+"src/etrack/providers/adapters/topology/langgraph.py" = ["TID251"]
+"src/etrack/providers/drivers/sink/otlp.py" = ["TID251"]
+"src/etrack/processors/layout.py" = ["TID251"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["etrack"]
+
+[tool.ruff.lint.flake8-type-checking]
+### pydantic and msgspec resolve these classes' annotations at runtime: their imports must stay real.
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "etrack.infra.config.base.BaseSettings",
+    "msgspec.Struct",
+    "etrack.models.event.EventView",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+### the framework-agnostic core: only a source, a topology or a sink may speak a framework.
+"langchain_core".msg = "only providers/adapters/source/langgraph speaks LangChain"
+"langgraph".msg = "only providers/adapters/{source,topology}/langgraph speak LangGraph"
+"opentelemetry".msg = "only providers/drivers/sink/otlp speaks OpenTelemetry"
+"eserde".msg = "serialization belongs to the sink that serializes: only providers/drivers/sink/otlp encodes"
+"rustworkx".msg = "only processors/layout speaks rustworkx"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+##### TYPES #####
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.ty.terminal]
+error-on-warning = true
+
+##### TEST #####
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "-ra"]
+### tests on the path, not tests/unit: the mirror stays out of the `etrack` namespace.
+pythonpath = ["src", "tests"]
+strict = true
+filterwarnings = ["error"]
+timeout = "60"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: slow tests (deselect with -m 'not slow')",
+    "integration: needs the sandbox collector (`make stack`); skipped when it does not answer — `make e2e`",
+]
+
+##### COVERAGE #####
+[tool.coverage.run]
+source_pkgs = ["etrack"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "@overload", "raise NotImplementedError", '^\s*\.\.\.$']
