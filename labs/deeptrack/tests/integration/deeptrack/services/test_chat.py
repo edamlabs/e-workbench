@@ -10,7 +10,7 @@ from langchain_core.messages import AIMessage
 from deeptrack.lifespan.sealed import lifespan
 from infra.settings import settings as st
 from processors.models import EventKind, EventPhase, RunEvent
-from tests.support.fake import ScriptedChat, call
+from tests.support.fake import FakeClassifier, ScriptedChat, call
 
 pytestmark = pytest.mark.integration
 GATE_CALLS = ["onto_clear", "onto_load", "onto_load", "onto_load", "onto_shacl"]
@@ -28,7 +28,7 @@ def claim(poliza: str, fecha: str) -> tuple[AIMessage, ...]:
 
 
 async def test_stack_conforming_claim_stops_for_approval(frames: list[RunEvent]) -> None:
-    async with lifespan(ScriptedChat(*claim("pol-1001", "2026-07-01"))) as state:
+    async with lifespan(classify=FakeClassifier(), chat=ScriptedChat(*claim("pol-1001", "2026-07-01"))) as state:
         turn = await state.services.chat.turn("it-ok", "denuncia RC pol-1001", frames.append)
     assert turn.interrupt is not None
     gate = next(frame.id for frame in frames if frame.name == "gate" and frame.phase is EventPhase.START)
@@ -38,7 +38,7 @@ async def test_stack_conforming_claim_stops_for_approval(frames: list[RunEvent])
 
 
 async def test_stack_out_of_term_claim_is_fed_back(frames: list[RunEvent]) -> None:
-    async with lifespan(ScriptedChat(*claim("pol-2002", "2026-07-01"))) as state:
+    async with lifespan(classify=FakeClassifier(), chat=ScriptedChat(*claim("pol-2002", "2026-07-01"))) as state:
         turn = await state.services.chat.turn("it-bad", "denuncia RC pol-2002", frames.append)
     assert turn.interrupt is None
     assert turn.reply.startswith("No procede")
@@ -47,7 +47,7 @@ async def test_stack_out_of_term_claim_is_fed_back(frames: list[RunEvent]) -> No
 
 
 async def test_stack_trace_lands_in_langfuse(frames: list[RunEvent]) -> None:
-    async with lifespan(ScriptedChat(*claim("pol-1001", "2026-07-01"))) as state:
+    async with lifespan(classify=FakeClassifier(), chat=ScriptedChat(*claim("pol-1001", "2026-07-01"))) as state:
         turn = await state.services.chat.turn("it-trace", "denuncia RC pol-1001", frames.append)
         await state.providers.trace.flush()
     config = st.providers.drivers.trace.langfuse

@@ -2,11 +2,13 @@
 
 from langchain_core.messages import AIMessage
 
+from deeptrack.logic.guard import REPLIES
+from deeptrack.models.guard import GuardLabel
 from deeptrack.models.proposal import Decision
 from deeptrack.services.chat import ChatService
 from processors.models import EventKind, EventPhase, RunEvent
 from processors.projector import EventProjector
-from tests.support.fake import FakeTrace
+from tests.support.fake import FakeClassifier, FakeTrace
 
 
 def test_chat_run_config(compiled) -> None:
@@ -42,3 +44,24 @@ async def test_chat_turn_stops_then_resumes(compiled, proposing, frames: list[Ru
     assert done.interrupt is None
     assert done.reply.startswith("Transacción registrada")
     assert done.run_id != stopped.run_id
+
+
+async def test_chat_guard_stops_the_whole_run(compiled, proposing, frames: list[RunEvent]) -> None:
+    graph = compiled((True,), *proposing, guard=FakeClassifier("abuso"))
+    turn = await ChatService(graph, FakeTrace(), frozenset()).turn("t1", "insulto", frames.append)
+    assert turn.blocked == "abuso"
+    assert turn.reply == REPLIES[GuardLabel.ABUSO]
+    state = await graph.aget_state({"configurable": {"thread_id": "t1"}})
+    ### the input is recorded before the step; nothing of the agent's step was committed — no reply, no proposal.
+    assert [each.text for each in state.values["messages"]] == ["insulto"]
+    assert "propuesta" not in state.values
+    assert state.interrupts == ()
+    assert [f for f in frames if f.name == "guard" and f.phase is EventPhase.ERROR]
+
+
+async def test_chat_guard_cancels_a_slower_agent(compiled, proposing, frames: list[RunEvent]) -> None:
+    ### the guard answers after the agent has begun: the step still fails whole, the gate never runs.
+    graph = compiled((True,), *proposing, guard=FakeClassifier("fuera_de_tema", delay=0.05))
+    turn = await ChatService(graph, FakeTrace(), frozenset()).turn("t2", "dame código", frames.append)
+    assert turn.blocked == "fuera_de_tema"
+    assert not [f for f in frames if f.name == "gate"]

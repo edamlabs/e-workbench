@@ -46,6 +46,9 @@ test:             ## unit suite, no services needed
 integration:      ## scripted turns against the live stack (make stack first), no model
 	uv run pytest -q -p no:tach -m "integration and not llm"
 
+bench:            ## the ontology A/B (BENCH.md) on the real model; R=3 repeats, RESUME=reports/ab-….jsonl to continue
+	uv run python tests/benchmark/deeptrack/ab.py --repeats $(or $(R),3) $(if $(RESUME),--resume $(RESUME),)
+
 questions:        ## PREGUNTAS.md on the real model and the live stack — structural assertions
 	uv run pytest -q -p no:tach -m llm -rA
 
@@ -57,4 +60,4 @@ tools:            ## each ontology server's tools and schemas
 chat:             ## talk to the agents (needs Vertex creds: see .env.example)
 	uv run deeptrack chat
 
-.PHONY: help sync env stack dev down questions purge lint types arch test integration check tools chat
+.PHONY: help sync env stack dev down questions bench purge lint types arch test integration check tools chat

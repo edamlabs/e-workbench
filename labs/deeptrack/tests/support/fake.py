@@ -1,5 +1,6 @@
 """Test doubles: a scripted chat model and its provider, and an ontology server with scripted SHACL verdicts."""
 
+import asyncio
 import json
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any, ClassVar, Self
@@ -12,6 +13,7 @@ from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, StructuredTool
 
+from infra.errors import ModelError
 from ports.provider import Isolation, Locality, ProviderSpec, Workload
 
 
@@ -159,3 +161,36 @@ class ToolOntology(FakeOntology):
     @property
     def tools(self) -> Mapping[str, BaseTool]:
         return self._tools
+
+
+class FakeClassifier:
+    """A `ClassifyPort` that answers a fixed label after an optional delay, or fails like an outage."""
+
+    spec: ClassVar[ProviderSpec] = ProviderSpec("fake", Locality.EMBEDDED, Workload.CPU_BOUND, Isolation.LOOP)
+
+    def __init__(self, label: str = "seguros", delay: float = 0.0, *, down: bool = False) -> None:
+        self._label = label
+        self._delay = delay
+        self._down = down
+        self.seen: list[str] = []
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+    async def health(self) -> bool:
+        return not self._down
+
+    async def classify(
+        self, system: str, text: str, labels: tuple[str, ...], config: RunnableConfig | None = None
+    ) -> str:
+        self.seen.append(text)
+        await asyncio.sleep(self._delay)
+        match self._down:
+            case True:
+                msg = "classifier down"
+                raise ModelError(msg)
+            case False:
+                return self._label

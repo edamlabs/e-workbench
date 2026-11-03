@@ -16,10 +16,12 @@ class ChatRun(msgspec.Struct, frozen=True, kw_only=True):
 
 
 class ChatTurn(msgspec.Struct, frozen=True, kw_only=True):
-    """The run and trace it was, the last thing the assistant said, and the approval request when it stopped on one."""
+    """The run and trace it was, the last thing the assistant said, the approval request when it stopped on one, and
+    the guard's label when the guard stopped it."""
 
     run_id: str
     trace_id: str
     url: str
     reply: str = ""
     interrupt: dict[str, Any] | None = None
+    blocked: str | None = None

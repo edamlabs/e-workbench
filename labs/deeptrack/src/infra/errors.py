@@ -48,6 +48,15 @@ class ShaclError(EngineError):
     """A validation round whose report is not the SHACL report the engine reads."""
 
 
+##### LOGIC #####
+class GuardError(CoreError):
+    """The input guard refused the message: the whole run stops; `label` is why, `message` what the user reads."""
+
+    def __init__(self, message: str, label: str) -> None:
+        super().__init__(message)
+        self.label = label
+
+
 ##### PROCESSORS #####
 class ProcessorError(CoreError):
     """A processor refused its input."""

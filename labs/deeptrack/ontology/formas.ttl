@@ -9,6 +9,16 @@ seg:SiniestroShape a sh:NodeShape ;
                   sh:message "Un siniestro tiene exactamente una póliza existente."@es ] ;
     sh:property [ sh:path seg:fechaOcurrencia ; sh:datatype xsd:date ; sh:minCount 1 ; sh:maxCount 1 ;
                   sh:message "Un siniestro tiene una fecha de ocurrencia xsd:date."@es ] ;
+    sh:property [ sh:path seg:cobertura ; sh:class seg:Cobertura ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "Un siniestro afecta exactamente a una cobertura existente."@es ] ;
+    sh:sparql [
+        sh:message "La cobertura afectada no está contratada en la póliza."@es ;
+        sh:select """
+            PREFIX seg: <https://deeptrack.lab/seguros#>
+            SELECT $this WHERE {
+                $this seg:poliza ?p ; seg:cobertura ?c .
+                FILTER NOT EXISTS { ?p seg:cubre ?c }
+            }""" ] ;
     sh:sparql [
         sh:message "La fecha de ocurrencia cae fuera de la vigencia de la póliza."@es ;
         sh:select """

@@ -2,7 +2,7 @@
 
 import pytest
 
-from engines.shacl import ShaclEngine
+from engines.shacl import PassShaclEngine, ShaclEngine
 from infra.errors import ShaclError
 from tests.support.fake import FakeOntology
 
@@ -32,3 +32,9 @@ async def test_shacl_rejects_foreign_report() -> None:
 
     with pytest.raises(ShaclError):
         await ShaclEngine(Broken(), base=(), shapes="s").validate("c")
+
+
+async def test_shacl_pass_engine_judges_nothing() -> None:
+    report = await PassShaclEngine().validate("seg:x a seg:Siniestro .")
+    assert report.conforms
+    assert report.violations == ()

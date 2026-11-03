@@ -14,6 +14,7 @@ from langgraph.types import Command
 
 from deeptrack.models.proposal import Decision
 from deeptrack.models.turn import ChatRun, ChatTurn
+from infra.errors import GuardError
 from ports.trace import TracePort
 from processors.projector import EventProjector, Sink
 
@@ -67,7 +68,12 @@ class ChatService:
     async def turn(self, thread: str, message: str | Decision, sink: Sink) -> ChatTurn:
         """One run: a user message, or the operator's decision resuming an approval stop; frames go to `sink`."""
         run, projector = self.run(thread, sink)
-        await self._graph.ainvoke(self._turn_input(message), run.config)
+        try:
+            await self._graph.ainvoke(self._turn_input(message), run.config)
+        except GuardError as stop:
+            return ChatTurn(
+                run_id=run.run_id, trace_id=run.trace_id, url=run.url, reply=stop.message, blocked=stop.label
+            )
         snapshot = await self._graph.aget_state(run.config)
         stop = next((each.value for each in snapshot.interrupts), None)
         projector.interrupt(stop) if stop is not None else None

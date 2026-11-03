@@ -8,10 +8,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 from deeptrack.logic.agent import InsuranceAgent
 from deeptrack.logic.gate import ShaclGate
 from deeptrack.logic.graph import ChatGraph
+from deeptrack.logic.guard import InputGuard
 from engines.shacl import ShaclEngine
 from processors.models import EventKind, EventPhase, RunEvent
 from processors.projector import EventProjector
-from tests.support.fake import FakeOntology, script
+from tests.support.fake import FakeClassifier, FakeOntology, script
 
 
 def ancestors(span: str, by_id: dict[str, RunEvent]) -> tuple[str, ...]:
@@ -22,9 +23,8 @@ def ancestors(span: str, by_id: dict[str, RunEvent]) -> tuple[str, ...]:
 
 async def run_frames(proposing, frames: list[RunEvent]) -> list[RunEvent]:
     engine = ShaclEngine(FakeOntology([True]), base=(), shapes="shapes")
-    graph = ChatGraph(InsuranceAgent(script(*proposing), FakeOntology()).build(), ShaclGate(engine)).build(
-        InMemorySaver()
-    )
+    agent = InsuranceAgent(script(*proposing), FakeOntology()).build()
+    graph = ChatGraph(agent, ShaclGate(engine), InputGuard(FakeClassifier())).build(InMemorySaver())
     projector = EventProjector("run", "trace", frames.append)
     config: RunnableConfig = {"configurable": {"thread_id": "t"}, "callbacks": [projector], "recursion_limit": 80}
     await graph.ainvoke({"messages": [("user", "denuncia RC pol-1001")]}, config)

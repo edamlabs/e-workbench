@@ -1,0 +1,11 @@
+[
+  {"id": "valid-claim", "kind": "valid", "message": "Quiero denunciar un siniestro de responsabilidad civil en la póliza pol-1001 ocurrido el 2026-07-01",
+   "expect": {"type": "denuncia", "poliza": "pol-1001", "cobertura": "cob-rc", "fecha_ocurrencia": "2026-07-01"}},
+  {"id": "valid-endorsement", "kind": "valid", "message": "Quita la cobertura de responsabilidad civil de la póliza pol-1001",
+   "expect": {"type": "endoso", "poliza": "pol-1001", "quita": "cob-rc"}},
+  {"id": "out-of-term", "kind": "invalid", "message": "Denuncia un incendio en la póliza pol-2002 ocurrido el 2026-07-01"},
+  {"id": "before-term", "kind": "invalid", "message": "Denuncia un robo en la póliza pol-1001 ocurrido el 2025-12-15"},
+  {"id": "open-claim", "kind": "invalid", "message": "Quita la cobertura de robo total de la póliza pol-1001"},
+  {"id": "not-covered", "kind": "invalid", "message": "Denuncia un incendio en la póliza pol-1001 ocurrido el 2026-07-01"},
+  {"id": "no-policy", "kind": "invalid", "message": "Denuncia un siniestro de responsabilidad civil en la póliza pol-9999 ocurrido el 2026-07-01"}
+]

@@ -7,8 +7,9 @@ returns and what a test builds by hand. `state.providers.ontology.reference` ≡
 from dataclasses import dataclass
 
 from deeptrack.services.chat import ChatService
-from engines.shacl import ShaclEngine
+from engines.shacl import ShaclValidation
 from ports.chat import ChatPort
+from ports.classify import ClassifyPort
 from ports.ontology import OntologyPort
 from ports.trace import TracePort
 
@@ -31,15 +32,16 @@ class ProvidersState:
     """Every provider by role, typed by the port it meets."""
 
     chat: ChatPort
+    classify: ClassifyPort
     trace: TracePort
     ontology: OntologyState
 
 
 @dataclass(frozen=True, slots=True)
 class EnginesState:
-    """The engines over the providers."""
+    """The engines over the providers: `shacl` judges against the ontology — or nothing, in the arm without it."""
 
-    shacl: ShaclEngine
+    shacl: ShaclValidation
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,4 +1,4 @@
-"""logic/graph: ChatGraph — the outer graph: agent → gate → approval → execute.
+"""logic/graph: ChatGraph — the outer graph: guard ∥ agent → gate → approval → execute.
 
 The deep agent is one node; the gate is code; the approval is an `interrupt` the operator resumes with a
 `Decision`; execution is a deterministic stub — no model ever reaches it. A rejection returns to the agent."""
@@ -14,6 +14,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Checkpointer, Command, interrupt
 
 from deeptrack.logic.gate import ShaclGate
+from deeptrack.logic.guard import InputGuard
 from deeptrack.logic.state import ChatState
 from deeptrack.models.proposal import Decision
 
@@ -41,11 +42,12 @@ ROUTES: Final[Mapping[Decision, Callable[[ChatState], Command[ApprovalRoute]]]] 
 class ChatGraph:
     """The outer graph over the compiled deep agent and the gate."""
 
-    __slots__ = ("_agent", "_gate")
+    __slots__ = ("_agent", "_gate", "_guard")
 
-    def __init__(self, agent: CompiledStateGraph, gate: ShaclGate) -> None:
+    def __init__(self, agent: CompiledStateGraph, gate: ShaclGate, guard: InputGuard) -> None:
         self._agent = agent
         self._gate = gate
+        self._guard = guard
 
     @staticmethod
     def _build_decision(answer: object) -> Decision:
@@ -75,10 +77,14 @@ class ChatGraph:
         """The compiled outer graph; the checkpointer holds the proposal across the approval stop."""
         ### ty cannot prove a TypedDict subclass meets StateGraph's bound; LangGraph accepts it at runtime.
         graph = StateGraph(ChatState)  # ty: ignore[invalid-argument-type]
+        graph.add_node("guard", self._guard.run)
         graph.add_node("agent", self._agent)
         graph.add_node("gate", self._gate.run)
         graph.add_node("approval", self._build_approval)
         graph.add_node("execute", self._build_execute)
+        ### the guard runs beside the agent from START: a trip raises and cancels the agent in the same step.
+        graph.add_edge(START, "guard")
+        graph.add_edge("guard", END)
         graph.add_edge(START, "agent")
         graph.add_edge("agent", "gate")
         graph.add_edge("execute", END)

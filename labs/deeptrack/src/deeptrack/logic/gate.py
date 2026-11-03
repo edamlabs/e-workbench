@@ -12,7 +12,7 @@ from langgraph.types import Command
 
 from deeptrack.logic.state import ChatState
 from deeptrack.models.proposal import Proposal
-from engines.shacl import ShaclEngine
+from engines.shacl import ShaclValidation
 from ports.ontology import ShaclReport
 
 RETRIES: Final[int] = 3
@@ -25,7 +25,7 @@ class ShaclGate:
 
     __slots__ = ("_engine",)
 
-    def __init__(self, engine: ShaclEngine) -> None:
+    def __init__(self, engine: ShaclValidation) -> None:
         self._engine = engine
 
     @staticmethod

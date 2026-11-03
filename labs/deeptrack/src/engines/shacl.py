@@ -4,12 +4,19 @@ The server holds one store, so rounds are serialized behind a lock; the engine k
 texts and the shapes. Every call carries the caller's config, so each step is a span under whoever asked."""
 
 import asyncio
+from typing import Protocol
 
 import msgspec
 from langchain_core.runnables import RunnableConfig
 
 from infra.errors import ShaclError
 from ports.ontology import OntologyPort, ShaclReport
+
+
+class ShaclValidation(Protocol):
+    """What the gate needs from an engine: a candidate in, a report out."""
+
+    async def validate(self, turtle: str, config: RunnableConfig | None = None) -> ShaclReport: ...
 
 
 class ShaclEngine:
@@ -35,3 +42,13 @@ class ShaclEngine:
         except msgspec.DecodeError as error:
             msg = f"shacl: the server's answer is not a SHACL report ({raw[:200]})"
             raise ShaclError(msg) from error
+
+
+class PassShaclEngine:
+    """The engine of the arm without ontology: it judges nothing — every candidate conforms. Same port, same node."""
+
+    __slots__ = ()
+
+    async def validate(self, turtle: str, config: RunnableConfig | None = None) -> ShaclReport:  # noqa: ARG002 — the port's signature
+        """Conforms, always."""
+        return ShaclReport(conforms=True)

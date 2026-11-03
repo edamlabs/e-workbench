@@ -56,11 +56,12 @@ SELECT ?asegurado ?ramo ?desde ?hasta ?cobertura ?coberturaNombre ?siniestro ?si
 class InsuranceAgent:
     """The deep agent over a chat model and the reference ontology server."""
 
-    __slots__ = ("_model", "_reference")
+    __slots__ = ("_model", "_ontologist", "_reference")
 
-    def __init__(self, model: BaseChatModel, reference: OntologyPort) -> None:
+    def __init__(self, model: BaseChatModel, reference: OntologyPort, *, ontologist: bool = True) -> None:
         self._model = model
         self._reference = reference
+        self._ontologist = ontologist
 
     ############################################################
 
@@ -79,7 +80,7 @@ class InsuranceAgent:
         the transactions manager reads one policy and proposes."""
         consult = StructuredTool.from_function(coroutine=self.policy, name="consultar_poliza", handle_tool_error=True)
         reading = [self._reference.tools[name] for name in READ_TOOLS if name in self._reference.tools]
-        return [
+        roles: list[SubAgent] = [
             {
                 "name": "ontologo",
                 "description": "Resuelve términos y relaciones del dominio seguros contra la ontología.",
@@ -100,6 +101,8 @@ class InsuranceAgent:
                 "middleware": [ProposalMiddleware()],
             },
         ]
+        ### the arms without the ontologist drop the role whole: the orchestrator is told of the rest only.
+        return [role for role in roles if self._ontologist or role["name"] != "ontologo"]
 
     def build(self) -> CompiledStateGraph:
         """The compiled deep agent, ready to mount as the outer graph's `agent` node."""

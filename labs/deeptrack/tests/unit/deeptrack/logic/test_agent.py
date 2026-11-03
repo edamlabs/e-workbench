@@ -42,3 +42,9 @@ async def test_agent_policy_refuses_unsafe_name() -> None:
     with pytest.raises(ToolException, match="pol-1001"):
         await InsuranceAgent(script(), server).policy("pol-1001 } DROP")
     assert server.calls == []
+
+
+def test_agent_without_ontologist_drops_the_role() -> None:
+    server = ToolOntology(["onto_load", "onto_query", "onto_stats"])
+    roles = tools_of(InsuranceAgent(script(), server, ontologist=False))
+    assert sorted(roles) == ["consultas", "transacciones"]

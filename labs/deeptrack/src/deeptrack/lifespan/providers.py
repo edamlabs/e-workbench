@@ -14,9 +14,11 @@ from infra.config.chat import ChatProvider
 from infra.settings import settings as st
 from infra.state import State
 from ports.chat import ChatPort
+from ports.classify import ClassifyPort
 from ports.provider import Provider
 from providers.drivers.chat.gemini import GeminiChatDriver
 from providers.drivers.chat.vertex import VertexChatDriver
+from providers.drivers.classify.gemini import GeminiClassifyDriver
 from providers.drivers.ontology.openontologies import OpenOntologiesDriver
 from providers.drivers.trace.langfuse import LangfuseTraceDriver
 
@@ -42,10 +44,13 @@ async def ontology(stack: AsyncExitStack) -> OntologyState:
     )
 
 
-async def providers(state: State, stack: AsyncExitStack, chat: ChatPort | None = None) -> None:
+async def providers(
+    state: State, stack: AsyncExitStack, chat: ChatPort | None = None, classify: ClassifyPort | None = None
+) -> None:
     """Open every provider in dependency order and mount `state.providers`."""
     state.providers = ProvidersState(
         trace=await opened(stack, LangfuseTraceDriver()),
         ontology=await ontology(stack),
         chat=await opened(stack, chat or CHATS[st.chat.provider]()),
+        classify=await opened(stack, classify or GeminiClassifyDriver()),
     )
