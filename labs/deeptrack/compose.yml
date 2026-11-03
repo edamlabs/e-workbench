@@ -55,6 +55,9 @@ services:
     image: docker.langfuse.com/langfuse/langfuse:4
     container_name: labs-langfuse
     hostname: labs-langfuse
+    labels:
+      ### the image bakes `name=langfuse/…` (UBI convention); lazydocker shows it instead of the container name.
+      name: labs-langfuse
     restart: unless-stopped
     depends_on: *langfuse-deps
     ports:
@@ -83,6 +86,9 @@ services:
     image: docker.langfuse.com/langfuse/langfuse-worker:4
     container_name: labs-langfuse-worker
     hostname: labs-langfuse-worker
+    labels:
+      ### the image bakes `name=langfuse/…` (UBI convention); lazydocker shows it instead of the container name.
+      name: labs-langfuse-worker
     restart: unless-stopped
     depends_on: *langfuse-deps
     environment: *langfuse-env
