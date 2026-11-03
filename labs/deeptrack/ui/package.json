@@ -1,5 +1,5 @@
 {
-  "name": "deeptrack-web",
+  "name": "deeptrack-ui",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.9.1",
