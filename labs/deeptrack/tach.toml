@@ -1,0 +1,38 @@
+# Import contracts: dependencies point inward. (models, ops) ← logic ← (adapters, instrument) ← infra ← deeptrack.
+source_roots = ["src"]
+exclude = ["tests"]
+forbid_circular_dependencies = true
+exact = true
+root_module = "forbid"
+
+[[modules]]
+path = "deeptrack"
+depends_on = ["deeptrack.adapters", "deeptrack.infra", "deeptrack.instrument", "deeptrack.models"]
+
+[[modules]]
+path = "deeptrack.models"
+depends_on = []
+
+[[modules]]
+path = "deeptrack.ops"
+depends_on = []
+
+[[modules]]
+path = "deeptrack.logic"
+depends_on = ["deeptrack.models"]
+
+[[modules]]
+path = "deeptrack.adapters"
+depends_on = ["deeptrack.infra.config", "deeptrack.models", "deeptrack.ops"]
+
+[[modules]]
+path = "deeptrack.instrument"
+depends_on = ["deeptrack.adapters", "deeptrack.models", "deeptrack.ops"]
+
+[[modules]]
+path = "deeptrack.infra.config"
+depends_on = []
+
+[[modules]]
+path = "deeptrack.infra"
+depends_on = ["deeptrack.adapters", "deeptrack.infra.config", "deeptrack.instrument", "deeptrack.logic"]

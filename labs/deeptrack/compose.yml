@@ -1,0 +1,39 @@
+# deeptrack — los dos servidores Open Ontologies del lab (MCP Streamable HTTP, store en memoria).
+# ontoref: la ontología de referencia que el agente consulta; ontoval: la copia donde el gate valida.
+# Cada uno anuncia solo su lista blanca (--tools-allow): el agente no puede ni ver una herramienta que escribe.
+# Langfuse vive en e-arkhetypo: stack/watch/langfuse (make stack levanta ambos).
+x-onto: &onto
+  image: ghcr.io/fabio-rovai/open-ontologies:latest
+  restart: unless-stopped
+  environment:
+    OPEN_ONTOLOGIES_HTTP_HOST: 0.0.0.0
+    OPEN_ONTOLOGIES_HTTP_PORT: "8080"
+  networks:
+    - stack
+
+services:
+  ontoref:
+    <<: *onto
+    container_name: ontoref
+    hostname: ontoref
+    command: ["serve-http", "--tools-allow", "onto_load,onto_query,onto_stats"]
+    labels:
+      stack.category: "gdb"
+      stack.port: "8080"
+    ports:
+      - "127.0.0.1:${ONTOREF_PORT:-8080}:8080"
+
+  ontoval:
+    <<: *onto
+    container_name: ontoval
+    hostname: ontoval
+    command: ["serve-http", "--tools-allow", "onto_clear,onto_load,onto_shacl,onto_stats"]
+    labels:
+      stack.category: "gdb"
+      stack.port: "8081"
+    ports:
+      - "127.0.0.1:${ONTOVAL_PORT:-8081}:8080"
+
+networks:
+  stack:
+    name: stack

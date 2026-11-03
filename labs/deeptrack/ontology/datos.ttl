@@ -1,0 +1,24 @@
+@prefix seg: <https://deeptrack.lab/seguros#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+##### DATOS FICTICIOS — nada aquí es una persona real #####
+seg:ramo-automotor a seg:Ramo ; seg:nombre "Automotor" .
+seg:ramo-hogar     a seg:Ramo ; seg:nombre "Hogar" .
+seg:prod-01 a seg:Productor ; seg:nombre "Productora Demo" .
+
+seg:cob-rc       a seg:Cobertura ; seg:nombre "Responsabilidad civil" .
+seg:cob-robo     a seg:Cobertura ; seg:nombre "Robo total" .
+seg:cob-incendio a seg:Cobertura ; seg:nombre "Incendio" .
+
+seg:aseg-01 a seg:Asegurado ; seg:nombre "Ana Ficticia" ;  seg:cuit "20111111112" .
+seg:aseg-02 a seg:Asegurado ; seg:nombre "Luis Inventado" ; seg:cuit "27222222223" .
+
+seg:pol-1001 a seg:Poliza ; seg:asegurado seg:aseg-01 ; seg:ramo seg:ramo-automotor ; seg:productor seg:prod-01 ;
+    seg:cubre seg:cob-rc , seg:cob-robo ;
+    seg:vigenciaDesde "2026-01-01"^^xsd:date ; seg:vigenciaHasta "2026-12-31"^^xsd:date .
+seg:pol-2002 a seg:Poliza ; seg:asegurado seg:aseg-02 ; seg:ramo seg:ramo-hogar ; seg:productor seg:prod-01 ;
+    seg:cubre seg:cob-incendio ;
+    seg:vigenciaDesde "2025-03-01"^^xsd:date ; seg:vigenciaHasta "2026-02-28"^^xsd:date .
+
+seg:sin-0001 a seg:Siniestro ; seg:poliza seg:pol-1001 ; seg:cobertura seg:cob-robo ;
+    seg:fechaOcurrencia "2026-06-10"^^xsd:date ; seg:abierto true .
