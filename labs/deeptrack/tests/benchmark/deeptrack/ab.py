@@ -8,7 +8,7 @@ the case-clustered bootstrap interval of the mean difference against the pre-reg
 import importlib.metadata
 import json
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
@@ -61,6 +61,8 @@ class Sample:
     llm_calls: int
     mcp_calls: int
     error: str = ""
+    trace_id: str = ""
+    proposal: dict[str, Any] | None = None
 
     @property
     def key(self) -> tuple[str, str, int]:
@@ -107,7 +109,9 @@ class AbBench:
                 frames, arm, case, repeat, began, None, "error", None, f"{type(error).__name__}: {error}"
             )
         correct, stopper = self._run_judge(case, frames, turn.interrupt, turn.blocked)
-        return self._run_measure(frames, arm, case, repeat, began, correct, stopper, turn.blocked)
+        measured = self._run_measure(frames, arm, case, repeat, began, correct, stopper, turn.blocked)
+        ### what reached approval, and where its trace is: a wrong outcome is diagnosed from the sample alone.
+        return replace(measured, trace_id=turn.trace_id, proposal=(turn.interrupt or {}).get("propuesta"))
 
     @staticmethod
     def _run_measure(  # noqa: PLR0917 — one sample's every field, positional at its two call sites

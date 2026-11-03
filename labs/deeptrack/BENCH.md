@@ -68,3 +68,27 @@ least 20 transaction cases — n comes from the cases, not from the repeats; r =
 - **Repeats:** r = 2 (catches flakiness; power comes from the cases).
 - **Hypothesis, metric, threshold:** unchanged — H1: `full` - `no_ontology` > +0.20 in correctness.
 - **Secondary (reported, not decided on):** `full` - `no_ontologist`, same method.
+
+## 2026-11-03 — revision 2, result
+
+120 samples, 0 failures (`reports/ab-20261103T125235.*`, not committed). Pre-registered decision: `full` - `no_ontology`
+= +0.28, case-clustered 95 % [+0.07, +0.50] → **undecided at this n**. Secondary `full` - `no_ontologist`: -0.03
+[-0.07, +0.00].
+
+What the cases show, by kind of violation (invalid cases, samples that reached approval):
+
+| Violation | Cases | `full` | `no_ontologist` | `no_ontology` |
+|---|---|---|---|---|
+| out of term (after, before, day before) | 4 | 0/8 | 0/8 | **8/8** |
+| coverage with an open claim (endorsement) | 2 | 0/4 | 0/4 | **4/4** |
+| coverage not contracted | 4 | 1/8 | 0/8 | 0/8 |
+| policy does not exist | 2 | 0/4 | 0/4 | 0/4 |
+
+Reading: the agent alone catches what it can read in the policy (coverages, existence); it never catches the rules
+that live only in the shapes (term dates, open claims) — the gate catches all of them. Overall correctness dilutes
+that: valid cases (8) and agent-caught invalid ones (6) carry no difference by construction, so the mean is fixed by
+the case mix, not by the layer. The one `full` failure (not-covered, pol-4004) did not reproduce in 4 reruns; the
+sample did not record what reached approval — it does now (`proposal`, `trace_id`).
+
+Proposed revision 3 (not run; for Damien to accept): primary metric = **escape rate of invalid transactions** (share
+of invalid cases that reach approval), per arm and per kind of violation — the question asked, without the dilution.
