@@ -187,12 +187,12 @@ services:
     ports:
       - "127.0.0.1:${LABS_ONTOVAL_PORT:-28102}:8080"
 
-  ##### WEB #####
+  ##### AGUI #####
   # CopilotKit chat (Next.js dev, hot reload from ./web) over the AG-UI server `make dev` runs on the host.
   # Host network: it reaches 127.0.0.1:${LABS_SERVER_PORT} and serves only on 127.0.0.1 — nothing on the LAN.
-  labs-web:
+  labs-agui:
     image: node:24-alpine
-    container_name: labs-web
+    container_name: labs-agui
     restart: unless-stopped
     network_mode: host
     user: "${LABS_UID:-1000}:${LABS_GID:-1000}"
@@ -203,20 +203,20 @@ services:
       COPILOTKIT_TELEMETRY_DISABLED: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       DEEPTRACK_AGENT_URL: http://127.0.0.1:${LABS_SERVER_PORT:-28103}/agui
-    command: sh -c "corepack pnpm install --frozen-lockfile && corepack pnpm exec next dev -H 127.0.0.1 -p ${LABS_WEB_PORT:-28104}"
+    command: sh -c "corepack pnpm install --frozen-lockfile && corepack pnpm exec next dev -H 127.0.0.1 -p ${LABS_AGUI_PORT:-28104}"
     volumes:
       - ./web:/app
-      - labs-web-modules:/app/node_modules
+      - labs-agui-modules:/app/node_modules
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${LABS_WEB_PORT:-28104}/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${LABS_AGUI_PORT:-28104}/ || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 60
       start_period: 20s
 
 volumes:
-  labs-web-modules:
-    name: labs-web-modules
+  labs-agui-modules:
+    name: labs-agui-modules
   labs-postgres-data:
     name: labs-postgres-data
   labs-clickhouse-data:

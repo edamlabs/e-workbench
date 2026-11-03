@@ -16,7 +16,7 @@ env:              ## write .env from .env.example with fresh random secrets (nev
 stack: env        ## restart the lab's stack: down whatever is up (volumes kept), then up and wait until healthy
 	docker compose down --remove-orphans
 	@### the web's node_modules volume is born root-owned; the dev server runs as the host user.
-	docker compose run --rm --no-deps --user root --entrypoint chown labs-web $(or $(LABS_UID),1000):$(or $(LABS_GID),1000) /app/node_modules
+	docker compose run --rm --no-deps --user root --entrypoint chown labs-agui $(or $(LABS_UID),1000):$(or $(LABS_GID),1000) /app/node_modules
 	docker compose up -d --wait
 
 dev: env          ## the AG-UI server (Granian, reload) on 127.0.0.1:$(SERVER_PORT); `make down` stops it
