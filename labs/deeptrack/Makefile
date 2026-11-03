@@ -1,4 +1,6 @@
 .DEFAULT_GOAL := help
+-include .env
+SERVER_PORT := $(or $(LABS_SERVER_PORT),28103)
 
 help:             ## list targets
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -14,7 +16,12 @@ env:              ## write .env from .env.example with fresh random secrets (nev
 stack: env        ## the lab's stack (labs-*), detached, waiting until healthy
 	docker compose up -d --wait
 
-down:             ## stop the lab's stack, keep its volumes
+dev: env          ## the AG-UI server (Granian, reload) on 127.0.0.1:$(SERVER_PORT); `make down` stops it
+	@echo $$$$ > .dev.pid; exec uv run granian --interface asgi --host 127.0.0.1 --port $(SERVER_PORT) \
+		--reload --reload-paths src deeptrack.api.app:app
+
+down: env         ## stop everything, up or not: the dev server and the stack (volumes kept)
+	@test -f .dev.pid && kill $$(cat .dev.pid) 2>/dev/null; rm -f .dev.pid
 	docker compose down
 
 purge:            ## stop the lab's stack and delete its volumes
@@ -44,4 +51,4 @@ tools:            ## each ontology server's tools and schemas
 chat:             ## talk to the agents (needs Vertex creds: see .env.example)
 	uv run deeptrack chat
 
-.PHONY: help sync env stack down purge lint types arch test integration check tools chat
+.PHONY: help sync env stack dev down purge lint types arch test integration check tools chat

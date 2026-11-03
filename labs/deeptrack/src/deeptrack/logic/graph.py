@@ -48,8 +48,20 @@ class ChatGraph:
         self._gate = gate
 
     @staticmethod
-    def _build_approval(state: ChatState) -> Command[ApprovalRoute]:
-        decision = Decision(interrupt({"propuesta": state.get("propuesta")}))
+    def _build_decision(answer: object) -> Decision:
+        """The operator's answer as a Decision: the bare value (CLI) or `{"decision": …}` (the UI's resolve payload)."""
+        match answer:
+            case {"decision": str() as said}:
+                return Decision(said)
+            case str():
+                return Decision(answer)
+            case other:
+                msg = f"an approval is answered with a Decision, not {other!r}"
+                raise ValueError(msg)
+
+    @classmethod
+    def _build_approval(cls, state: ChatState) -> Command[ApprovalRoute]:
+        decision = cls._build_decision(interrupt({"propuesta": state.get("propuesta")}))
         return ROUTES[decision](state)
 
     @staticmethod

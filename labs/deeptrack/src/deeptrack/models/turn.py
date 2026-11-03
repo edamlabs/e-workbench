@@ -3,6 +3,16 @@
 from typing import Any
 
 import msgspec
+from langchain_core.runnables import RunnableConfig
+
+
+class ChatRun(msgspec.Struct, frozen=True, kw_only=True):
+    """One run before it starts: its ids, where its trace opens, and the config every driving side hands the graph."""
+
+    run_id: str
+    trace_id: str
+    url: str
+    config: RunnableConfig
 
 
 class ChatTurn(msgspec.Struct, frozen=True, kw_only=True):

@@ -13,7 +13,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
 from deeptrack.models.proposal import Decision
-from deeptrack.models.turn import ChatTurn
+from deeptrack.models.turn import ChatRun, ChatTurn
 from ports.trace import TracePort
 from processors.projector import EventProjector, Sink
 
@@ -45,8 +45,13 @@ class ChatService:
 
     ############################################################
 
-    async def turn(self, thread: str, message: str | Decision, sink: Sink) -> ChatTurn:
-        """One run: a user message, or the operator's decision resuming an approval stop; frames go to `sink`."""
+    @property
+    def graph(self) -> CompiledStateGraph:
+        """The compiled outer graph — what a protocol adapter (AG-UI) drives with a run's config."""
+        return self._graph
+
+    def run(self, thread: str, sink: Sink) -> tuple[ChatRun, EventProjector]:
+        """A fresh run on `thread`: its ids and config, the projector pushing its frames to `sink`, the tracer's handler."""
         run_id = uuid.uuid7().hex
         trace_id = self._trace.trace_id(run_id)
         projector = EventProjector(run_id, trace_id, sink, self._mcp)
@@ -57,14 +62,19 @@ class ChatService:
             "run_name": "deeptrack",
             "recursion_limit": RECURSION,
         }
-        await self._graph.ainvoke(self._turn_input(message), config)
-        snapshot = await self._graph.aget_state(config)
+        return ChatRun(run_id=run_id, trace_id=trace_id, url=self._trace.url(trace_id), config=config), projector
+
+    async def turn(self, thread: str, message: str | Decision, sink: Sink) -> ChatTurn:
+        """One run: a user message, or the operator's decision resuming an approval stop; frames go to `sink`."""
+        run, projector = self.run(thread, sink)
+        await self._graph.ainvoke(self._turn_input(message), run.config)
+        snapshot = await self._graph.aget_state(run.config)
         stop = next((each.value for each in snapshot.interrupts), None)
         projector.interrupt(stop) if stop is not None else None
         return ChatTurn(
-            run_id=run_id,
-            trace_id=trace_id,
-            url=self._trace.url(trace_id),
+            run_id=run.run_id,
+            trace_id=run.trace_id,
+            url=run.url,
             reply=self._turn_reply(snapshot.values),
             interrupt=stop,
         )

@@ -38,4 +38,5 @@ class VertexSettings(BaseSettings):
             "thinking_level": str(self.thinking_level),
             "timeout": self.timeout,
             "streaming": True,
+            "output_version": "v1",
         }

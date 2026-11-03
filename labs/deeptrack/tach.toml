@@ -9,7 +9,7 @@ root_module = "forbid"
 
 ##### LAYERS #####
 # Ordered high → low, as e-arkhetypo's graph: a layer may import lower layers, importing upward fails.
-# `app`: `__main__` and the cli · `lifespan`: the composition root and the typed state branches it mounts — the
+# `app`: `__main__`, the AG-UI server (`api`) and the cli · `lifespan`: the composition root and the typed state branches it mounts — the
 # only place that names a concretion · `services`: the business · `logic`: the agents, the outer graph and its nodes
 # · then the vendored taxonomy: `execution` (engines, processors, providers' drivers — one horizontal layer, none
 # imports another), `ports` (one contract per capability), infra, ops, `errors` (the floor) and the lab's data.
@@ -21,6 +21,11 @@ unused_ignore_directives = "error"
 ##### MODULES #####
 [[modules]]
 path = "deeptrack.__main__"
+layer = "app"
+depends_on = ["deeptrack.cli"]
+
+[[modules]]
+path = "deeptrack.api"
 layer = "app"
 depends_on = ["deeptrack.cli"]
 
