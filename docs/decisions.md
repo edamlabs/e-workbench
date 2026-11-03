@@ -2,7 +2,7 @@
 
 ### 2026-10-22 · A public engine of its own, in edamlabs
 
-**Decision.** Maintenance of EDamLabs projects lives in `edamlabs/esteward`, public. The personal toolchain
+**Decision.** Maintenance of EDamLabs projects lives in `edamlabs/e-workbench`, public. The personal toolchain
 stays private and personal: it mounts projects and harnesses, it does not maintain them.
 
 **Evidence.** The fleet is public (libraries and dockerizable services); the engine acting on it is shared
@@ -14,7 +14,7 @@ infrastructure); a PyPI package (see below).
 
 ### 2026-10-22 · Consumed from git, never published
 
-**Decision.** esteward is not published to PyPI. Workflows check it out at the commit they run from.
+**Decision.** e-workbench is not published to PyPI. Workflows check it out at the commit they run from.
 
 **Evidence.** Engine and workflow versions can never drift; a release is a git tag; nobody outside EDamLabs
 installs it.
@@ -77,7 +77,7 @@ GitHub search (eventually consistent as well).
 **Decision.** The GitHub adapter follows one 301/302/307/308 from a moved repository; the deps module turns a
 moved repository into a `watch` finding naming the new location; a second redirect raises.
 
-**Evidence.** esteward's own fleet entry crashed on `jcrist/msgspec`, which answers 301 since it moved to
+**Evidence.** e-workbench's own fleet entry crashed on `jcrist/msgspec`, which answers 301 since it moved to
 `msgspec/msgspec`: wreq does not follow redirects, and the redirect body has no `archived` field.
 
 **Rejected.** Enabling wreq's redirect following globally (hides the move the fleet should record).
@@ -120,9 +120,9 @@ issue. One row per package keeps the dashboard readable and the action single.
 
 ### 2026-10-26 · act executes lockfile-only bumps, one self-merging PR per finding key
 
-**Decision.** `esteward run --act` carries out the fixable vulnerability findings whose fix is a lockfile-only
+**Decision.** `e-workbench run --act` carries out the fixable vulnerability findings whose fix is a lockfile-only
 bump: `cargo update -p <name>@<locked> --precise <fix>` / `uv lock --upgrade-package <name>==<fix>`, verified by
-re-parsing the lockfile (the fix pinned, the vulnerable version gone), committed to `esteward/act/<key-slug>`,
+re-parsing the lockfile (the fix pinned, the vulnerable version gone), committed to `e-workbench/act/<key-slug>`,
 pushed, and opened as a PR with squash auto-merge. One branch per finding key makes a re-run idempotent: the PR
 is updated, never duplicated. A bump that needs a manifest range change is out of the slice and escalates.
 
@@ -180,12 +180,12 @@ the treatment is very simple, and three stdlib cuts are the simple case.
 for three `urlsplit` cuts); one utility module per helper (the path names the module, the class holds the
 logic).
 
-### 2026-10-26 · The release mechanism lives once, in esteward; repositories keep tag-driven publishing
+### 2026-10-26 · The release mechanism lives once, in e-workbench; repositories keep tag-driven publishing
 
 **Decision.** The release policy (content in `## [Unreleased]` gates, a Fixed/Security entry releases at
 once, anything else once the oldest unreleased commit passes the fleet entry's `unreleased_age_days`;
 patch by default, minor on `### Added` or a `feat:` commit, a breaking marker escalates) and its execution
-both live in esteward. The stage folds the changelog line for line like e-serde's proven awk (golden-tested
+both live in e-workbench. The stage folds the changelog line for line like e-serde's proven awk (golden-tested
 against its output), bumps the static version fields, re-syncs the root lockfiles, opens one self-merging
 `chore(release): vX.Y.Z` PR per version, and pushes the tag onto that PR's merge commit on a later run.
 Repositories keep only the tag → build/publish half of their release flow. The module is enabled per fleet
@@ -194,14 +194,14 @@ entry as repositories converge: etrafilatura and anytomd first, whose `release.y
 
 **Evidence.** The same actions — bump, fold, PR, tag — already existed once (e-serde's `release.yml`) and
 would have needed copies in three more repositories; the organisation's instruction is to align same-action
-files to the newest of them and to keep what can be common in esteward. Tagging on a later run instead of
+files to the newest of them and to keep what can be common in e-workbench. Tagging on a later run instead of
 polling for the merge keeps a fleet run bounded, and every intermediate state converges: a folded version
 without its tag is a `watch` row, and the next run tags it. Live dry runs on etrafilatura and anytomd print
 the decisions (`no unreleased content`, tag and changelog agreeing).
 
 **Rejected.** Copying e-serde's `release.yml` into the tag-driven repositories (four copies of one
 mechanism, drifting — the original TODO's preference, superseded by the centralisation instruction);
-esteward dispatching each repository's release workflow (the mechanism still lives in five places);
+e-workbench dispatching each repository's release workflow (the mechanism still lives in five places);
 blocking the run until the release PR merges (a twenty-minute poll whose failure mode needs the same
 cross-run state anyway); automating a major release (a breaking marker escalates instead).
 
@@ -209,7 +209,7 @@ cross-run state anyway); automating a major release (a breaking marker escalates
 
 **Decision.** The `upstream` module reads each binding's parity baseline from `fleet/<repo>.toml`
 (`[[upstream.engines]]`: name, registry, parity). The repository keeps owning the mirror (its sync flow) and
-the API diff (its `apidiff` tooling); esteward owns only the detection of an engine that moved.
+the API diff (its `apidiff` tooling); e-workbench owns only the detection of an engine that moved.
 
 **Evidence.** The repositories hold parity implicitly — etrafilatura's byte-parity goldens are rewritten
 against whichever Python trafilatura is installed, and `apidiff` takes its versions as arguments — so no

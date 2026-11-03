@@ -3,7 +3,7 @@
 Texts ready to file, one per upstream repository. The org's classifier blocks the engine's instances from
 opening issues on third-party repositories, so Damien files them. Data verified against crates.io and OSV
 on 2026-10-26; chains are the exact output of `cargo tree -i` on our lockfiles (edamlabs/e-voice,
-edamlabs/anytomd), reproduced by esteward's act stage.
+edamlabs/anytomd), reproduced by e-workbench's act stage.
 
 ## 1 · npyz — https://github.com/ExpHP/npyz
 

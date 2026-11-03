@@ -1,12 +1,12 @@
 <p align="center">
-  <a href="https://github.com/edamlabs/esteward/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/edamlabs/esteward/ci.yml?label=test" alt="CI"></a>
+  <a href="https://github.com/edamlabs/e-workbench/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/edamlabs/e-workbench/ci.yml?label=test" alt="CI"></a>
   <a href="https://img.shields.io/badge/python-3.14-166b7e"><img src="https://img.shields.io/badge/python-3.14-166b7e" alt="Python"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/edamlabs/esteward?color=166b7e" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/edamlabs/e-workbench?color=166b7e" alt="License"></a>
 </p>
 
 Self-maintenance engine for EDamLabs projects: deterministic dependency, upstream, release, docs, security and community modules.
 
-Part of the **EDamLabs infrastructure**: EDamLabs' own machinery ([EDamLabs families](https://github.com/edamlabs/esteward#identity)).
+Part of the **EDamLabs infrastructure**: EDamLabs' own machinery ([EDamLabs families](https://github.com/edamlabs/e-workbench#identity)).
 
 | Verdict | Means | Lands as |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ family = "infra"    # what it is
 | --- | --- | --- |
 | `eager` | the eager series: EDamLabs' own products, the `e-` line | e-serde, e-voice |
 | `binding` | a Python binding of a third-party engine, kept compatible with its upstream | rtrafilatura, anytomd, gliner |
-| `infra` | the organisation's own machinery | esteward |
+| `infra` | the organisation's own machinery | e-workbench |
 
 
 ## Modules
@@ -54,7 +54,7 @@ Every module follows the same contract: a fleet entry in, a `Report` out.
 
 ## Act
 
-With `--act`, the engine carries out the `act` findings whose fix is a **lockfile-only** bump: the ecosystem's solver (`cargo update --precise` / `uv lock --upgrade-package`) runs in a fresh checkout, the bumped lockfile is re-parsed as the evidence, and the change lands as one PR per finding key (`esteward/act/<key-slug>`) that merges itself when every required check passes. Re-runs update the open PR instead of duplicating it, and the status row links it.
+With `--act`, the engine carries out the `act` findings whose fix is a **lockfile-only** bump: the ecosystem's solver (`cargo update --precise` / `uv lock --upgrade-package`) runs in a fresh checkout, the bumped lockfile is re-parsed as the evidence, and the change lands as one PR per finding key (`e-workbench/act/<key-slug>`) that merges itself when every required check passes. Re-runs update the open PR instead of duplicating it, and the status row links it.
 
 When the solver cannot reach the fix, the reverse dependency tree (`cargo tree -i` / `uv tree --invert`) decides: an intermediate package pinning the vulnerable range downgrades the finding to `watch · blocked upstream` with the chain as evidence (`zip 0.6.6 ← npyz 0.9.1 ← e-voice-tts`); the project's own manifest blocking the fix escalates, since that range is a human decision.
 
@@ -97,7 +97,7 @@ license = "Apache-2.0"             # a different license escalates
 ```bash
 make check                        # lint, types, import contracts, tests at 100 % coverage
 make run P=rtrafilatura           # dry run with your gh token: verdicts on screen, nothing published
-uv run esteward run rtrafilatura --act --release --publish   # what the fleet job does
+uv run e-workbench run rtrafilatura --act --release --publish   # what the fleet job does
 ```
 
 Decisions and their evidence: [`docs/decisions.md`](docs/decisions.md).

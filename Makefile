@@ -28,7 +28,7 @@ hooks:            ## install the git hooks
 	uv run prek install
 
 fleet:            ## list the projects under maintenance
-	uv run esteward fleet
+	uv run e-workbench fleet
 
 run:              ## dry run of one project: make run P=rtrafilatura
-	GH_TOKEN="$$(gh auth token)" uv run esteward run $(P)
+	GH_TOKEN="$$(gh auth token)" uv run e-workbench run $(P)
