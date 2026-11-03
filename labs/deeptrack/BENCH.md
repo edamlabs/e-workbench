@@ -57,3 +57,14 @@ interval is too narrow for this design.
 
 Revision for the next run (new pre-registration): resample by case (cluster bootstrap), and grow the case set to at
 least 20 transaction cases — n comes from the cases, not from the repeats; r = 2 is enough to catch flakiness.
+
+## 2026-11-03 — revision 2, registered before its first run
+
+- **Cases:** 20 transaction cases (8 valid, 12 invalid), `tests/benchmark/deeptrack/cases.json`, over an extended
+  fictitious data set (`ontology/datos.ttl`: pol-3003, pol-4004, an open and a closed claim). Every case's expected
+  outcome was checked against the SHACL engine before any agent ran: 20/20 agree.
+- **Unit of analysis:** the case. Per case, the mean over repeats of `full` - `no_ontology`; the 95 % interval is a
+  percentile bootstrap resampling cases (10 000 resamples, seed 7).
+- **Repeats:** r = 2 (catches flakiness; power comes from the cases).
+- **Hypothesis, metric, threshold:** unchanged — H1: `full` - `no_ontology` > +0.20 in correctness.
+- **Secondary (reported, not decided on):** `full` - `no_ontologist`, same method.

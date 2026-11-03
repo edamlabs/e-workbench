@@ -3,7 +3,7 @@
 Every sample is one fresh thread of one case on one arm, judged by the case's single correct outcome. Arms rotate
 per (repeat, case) so drift cancels; one warm-up turn per arm is discarded. Each sample is appended to the JSONL as
 it lands: a run that dies resumes from what it wrote (`--resume`), never relaunched whole. The summary decides H1 by
-the paired bootstrap interval of the mean difference against the pre-registered threshold — nothing else."""
+the case-clustered bootstrap interval of the mean difference against the pre-registered threshold — nothing else."""
 
 import importlib.metadata
 import json
@@ -183,15 +183,25 @@ class AbSummary:
     def __init__(self, samples: list[Sample]) -> None:
         self._samples = [each for each in samples if each.correct is not None]
 
-    def _pairs(self, a: str, b: str) -> np.ndarray:
-        """Per-(case, repeat) differences a - b of correctness, only where both arms have a judged sample."""
+    def _clusters(self, a: str, b: str) -> np.ndarray:
+        """Per-case mean difference a - b of correctness over the repeats both arms judged: one value per case.
+
+        Outcomes repeat almost exactly within a case, so the case is the independent unit (BENCH.md, revision 2)."""
         by = {(s.arm, s.case, s.repeat): float(bool(s.correct)) for s in self._samples}
-        keys = sorted({(case, repeat) for arm, case, repeat in by if arm == a and (b, case, repeat) in by})
-        return np.array([by[(a, case, repeat)] - by[(b, case, repeat)] for case, repeat in keys])
+        cases = sorted({case for arm, case, _ in by if arm == a})
+        diffs = [
+            [
+                by[(a, case, repeat)] - by[(b, case, repeat)]
+                for arm, c, repeat in by
+                if arm == a and c == case and (b, case, repeat) in by
+            ]
+            for case in cases
+        ]
+        return np.array([float(np.mean(each)) for each in diffs if each])
 
     @staticmethod
     def _interval(diffs: np.ndarray) -> tuple[float, float, float]:
-        """Mean difference and its 95 % paired percentile bootstrap interval."""
+        """Mean difference and its 95 % percentile bootstrap interval, resampling the clusters (cases)."""
         rng = np.random.default_rng(7)
         means = rng.choice(diffs, size=(RESAMPLES, diffs.size), replace=True).mean(axis=1)
         return float(diffs.mean()), float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
@@ -235,8 +245,8 @@ class AbSummary:
 
     def markdown(self, raw: Path, failed: int) -> str:
         """The report: decision first, then everything recorded."""
-        h1 = self._pairs(Arm.FULL, Arm.NO_ONTOLOGY)
-        h2 = self._pairs(Arm.FULL, Arm.NO_ONTOLOGIST)
+        h1 = self._clusters(Arm.FULL, Arm.NO_ONTOLOGY)
+        h2 = self._clusters(Arm.FULL, Arm.NO_ONTOLOGIST)
         (m1, l1, u1), (m2, l2, u2) = self._interval(h1), self._interval(h2)
         versions = ", ".join(f"{name} {importlib.metadata.version(name)}" for name in VERSIONS)
         lines = [
@@ -247,9 +257,9 @@ class AbSummary:
             "",
             "## Decision (H1: full - no_ontology > +0.20)",
             "",
-            f"Mean difference **{m1:+.2f}**, 95 % interval [{l1:+.2f}, {u1:+.2f}] over {h1.size} paired samples → {self._verdict(l1, u1)}.",
+            f"Mean difference **{m1:+.2f}**, 95 % case-clustered interval [{l1:+.2f}, {u1:+.2f}] over {h1.size} cases → {self._verdict(l1, u1)}.",
             "",
-            f"Secondary, not decided on — full - no_ontologist: {m2:+.2f} [{l2:+.2f}, {u2:+.2f}] over {h2.size} pairs.",
+            f"Secondary, not decided on — full - no_ontologist: {m2:+.2f} [{l2:+.2f}, {u2:+.2f}] over {h2.size} cases.",
             "",
             "## Arms",
             "",
@@ -257,7 +267,7 @@ class AbSummary:
             "|---|---|---|---|---|---|---|---|---|---|---|",
             *(self._arm_row(arm) for arm in Arm),
             "",
-            "## Who stopped the invalid cases",
+            "## Who stopped the invalid cases (samples)",
             "",
             "| Arm | gate | agent | guard | nobody (reached approval) |",
             "|---|---|---|---|---|",
@@ -271,7 +281,7 @@ app = App(name="ab", help="The ontology A/B bench (BENCH.md).")
 
 
 @app.default
-async def bench(repeats: int = 3, resume: Path | None = None) -> None:
+async def bench(repeats: int = 2, resume: Path | None = None) -> None:
     """Run the bench; `--resume reports/ab-….jsonl` continues a run that died."""
     REPORTS.mkdir(exist_ok=True)
     raw = resume or REPORTS / f"ab-{datetime.now(UTC):%Y%m%dT%H%M%S}.jsonl"

@@ -22,3 +22,20 @@ seg:pol-2002 a seg:Poliza ; seg:asegurado seg:aseg-02 ; seg:ramo seg:ramo-hogar 
 
 seg:sin-0001 a seg:Siniestro ; seg:poliza seg:pol-1001 ; seg:cobertura seg:cob-robo ;
     seg:fechaOcurrencia "2026-06-10"^^xsd:date ; seg:abierto true .
+
+##### AMPLIACIÓN 2026-11-03 — casos del banco A/B #####
+seg:aseg-03 a seg:Asegurado ; seg:nombre "Marta Supuesta" ; seg:cuit "23333333334" .
+seg:aseg-04 a seg:Asegurado ; seg:nombre "Pablo Hipotético" ; seg:cuit "20444444445" .
+
+seg:pol-3003 a seg:Poliza ; seg:asegurado seg:aseg-03 ; seg:ramo seg:ramo-hogar ; seg:productor seg:prod-01 ;
+    seg:cubre seg:cob-incendio , seg:cob-rc ;
+    seg:vigenciaDesde "2026-06-01"^^xsd:date ; seg:vigenciaHasta "2027-05-31"^^xsd:date .
+seg:pol-4004 a seg:Poliza ; seg:asegurado seg:aseg-04 ; seg:ramo seg:ramo-automotor ; seg:productor seg:prod-01 ;
+    seg:cubre seg:cob-rc ;
+    seg:vigenciaDesde "2024-01-01"^^xsd:date ; seg:vigenciaHasta "2024-12-31"^^xsd:date .
+
+### abierto: bloquea quitar incendio de pol-3003. Cerrado: NO bloquea quitar RC de pol-1001.
+seg:sin-0002 a seg:Siniestro ; seg:poliza seg:pol-3003 ; seg:cobertura seg:cob-incendio ;
+    seg:fechaOcurrencia "2026-07-20"^^xsd:date ; seg:abierto true .
+seg:sin-0003 a seg:Siniestro ; seg:poliza seg:pol-1001 ; seg:cobertura seg:cob-rc ;
+    seg:fechaOcurrencia "2026-02-02"^^xsd:date ; seg:abierto false .
