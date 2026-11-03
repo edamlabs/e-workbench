@@ -11,6 +11,8 @@ milestones it has reached.
 
 ### Added
 
+- Fleet entry `fleet/e-track.toml`: edamlabs/e-track (lib, eager) — deps, security, drift, release, docs,
+  community; the run-tracking library leaves `labs/etrack` for its own repository and PyPI.
 - `labs/`: the home of experiments bound sooner or later for production or another project.
 - `labs/etrack` (`TODO_etrack`): e-track, a framework-agnostic run tracking library on the e-arkhetypo library stack —
   one `RunEvent` model (13 kinds with a `custom` fallback, five phases, typed delta parts incl. reasoning) carried by
