@@ -1,4 +1,4 @@
-"""models.proposal: what the transactions subagent may propose — never execute — rendered as Turtle for the gate.
+"""models/proposal: what the transactions subagent may propose — never execute — rendered as Turtle for the gate.
 
 Identifiers are local names of the ontology's individuals (`pol-1001`), checked against a strict pattern on
 decode: whatever the model writes, nothing but a safe local name ever reaches the Turtle the gate loads."""

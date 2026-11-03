@@ -1,4 +1,4 @@
-"""models.turn: ChatTurn — what one turn leaves behind: the reply, or the stop waiting for the operator."""
+"""models/turn: ChatTurn — what one turn leaves behind: the reply, or the stop waiting for the operator."""
 
 from typing import Any
 

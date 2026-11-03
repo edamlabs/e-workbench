@@ -1,38 +1,90 @@
-# Import contracts: dependencies point inward. (models, ops) ← logic ← (adapters, instrument) ← infra ← deeptrack.
+##### ROOTS #####
 source_roots = ["src"]
 exclude = ["tests"]
+
+##### RULES #####
 forbid_circular_dependencies = true
 exact = true
 root_module = "forbid"
 
+##### LAYERS #####
+# Ordered high → low, as e-arkhetypo's graph: a layer may import lower layers, importing upward fails.
+# `app`: `__main__` and the cli · `lifespan`: the composition root and the typed state branches it mounts — the
+# only place that names a concretion · `services`: the business · `logic`: the agents, the outer graph and its nodes
+# · then the vendored taxonomy: `execution` (engines, processors, providers' drivers — one horizontal layer, none
+# imports another), `ports` (one contract per capability), infra, ops, `errors` (the floor) and the lab's data.
+layers = ["app", "lifespan", "services", "logic", "execution", "ports", "infra", "ops", "errors", "models"]
+
+[rules]
+unused_ignore_directives = "error"
+
+##### MODULES #####
 [[modules]]
-path = "deeptrack"
-depends_on = ["deeptrack.adapters", "deeptrack.infra", "deeptrack.instrument", "deeptrack.models"]
+path = "deeptrack.__main__"
+layer = "app"
+depends_on = ["deeptrack.cli"]
 
 [[modules]]
-path = "deeptrack.models"
+path = "deeptrack.cli"
+layer = "app"
 depends_on = []
 
 [[modules]]
-path = "deeptrack.ops"
+path = "deeptrack.lifespan"
+layer = "lifespan"
+depends_on = ["deeptrack.state"]
+
+[[modules]]
+path = "deeptrack.state"
+layer = "lifespan"
+depends_on = []
+
+[[modules]]
+path = "deeptrack.services"
+layer = "services"
 depends_on = []
 
 [[modules]]
 path = "deeptrack.logic"
-depends_on = ["deeptrack.models"]
-
-[[modules]]
-path = "deeptrack.adapters"
-depends_on = ["deeptrack.infra.config", "deeptrack.models", "deeptrack.ops"]
-
-[[modules]]
-path = "deeptrack.instrument"
-depends_on = ["deeptrack.adapters", "deeptrack.models", "deeptrack.ops"]
-
-[[modules]]
-path = "deeptrack.infra.config"
+layer = "logic"
 depends_on = []
 
 [[modules]]
-path = "deeptrack.infra"
-depends_on = ["deeptrack.adapters", "deeptrack.infra.config", "deeptrack.instrument", "deeptrack.logic"]
+path = "engines"
+layer = "execution"
+depends_on = []
+
+[[modules]]
+path = "processors"
+layer = "execution"
+depends_on = []
+
+[[modules]]
+path = "providers.drivers"
+layer = "execution"
+depends_on = []
+
+[[modules]]
+path = "ports"
+layer = "ports"
+depends_on = []
+
+[[modules]]
+path = "infra"
+layer = "infra"
+depends_on = []
+
+[[modules]]
+path = "infra.errors"
+layer = "errors"
+depends_on = []
+
+[[modules]]
+path = "ops"
+layer = "ops"
+depends_on = []
+
+[[modules]]
+path = "deeptrack.models"
+layer = "models"
+depends_on = []

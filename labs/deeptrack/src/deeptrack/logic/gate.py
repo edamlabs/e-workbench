@@ -1,4 +1,4 @@
-"""logic.gate: ShaclGate — the deterministic node every proposal crosses; the agent cannot skip what it cannot call.
+"""logic/gate: ShaclGate — the deterministic node every proposal crosses; the agent cannot skip what it cannot call.
 
 No proposal: the turn ends. A proposal that conforms goes to the operator. One that does not returns to the agent
 with the violations as a validation message, until the retry cap closes the turn with the last report."""
@@ -10,10 +10,10 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
-from deeptrack.logic.ports import OntoPort
 from deeptrack.logic.state import ChatState
 from deeptrack.models.proposal import Proposal
-from deeptrack.models.shacl import ShaclReport
+from engines.shacl import ShaclEngine
+from ports.ontology import ShaclReport
 
 RETRIES: Final[int] = 3
 ### "__end__" is LangGraph's END, spelled as the literal the route type checks.
@@ -21,12 +21,12 @@ type GateRoute = Literal["approval", "agent", "__end__"]
 
 
 class ShaclGate:
-    """SHACL over a fresh copy of the ontology plus the proposal, through the validation server."""
+    """The graph node over the SHACL engine: the proposal as Turtle in, a route out."""
 
-    __slots__ = ("_onto",)
+    __slots__ = ("_engine",)
 
-    def __init__(self, onto: OntoPort) -> None:
-        self._onto = onto
+    def __init__(self, engine: ShaclEngine) -> None:
+        self._engine = engine
 
     @staticmethod
     def _run_verdict(report: ShaclReport, spent: int) -> Command[GateRoute]:
@@ -60,5 +60,5 @@ class ShaclGate:
                 return Command[GateRoute](goto="__end__")
             case raw:
                 proposal = msgspec.convert(raw, Proposal, strict=False)
-                report = await self._onto.validate(proposal.turtle, config)
+                report = await self._engine.validate(proposal.turtle, config)
                 return self._run_verdict(report, state.get("intentos", 0) + 1)

@@ -5,7 +5,7 @@ from datetime import date
 import pytest
 from langchain_core.messages import AIMessage
 
-from deeptrack.models.event import RunEvent
+from processors.models import RunEvent
 from tests.support.fake import call
 
 PROPOSAL = {"poliza": "pol-1001", "cobertura": "cob-rc", "fecha_ocurrencia": date(2026, 7, 1).isoformat()}

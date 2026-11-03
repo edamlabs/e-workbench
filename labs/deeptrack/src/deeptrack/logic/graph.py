@@ -1,4 +1,4 @@
-"""logic.graph: ChatGraph — the outer graph: agent → gate → approval → execute.
+"""logic/graph: ChatGraph — the outer graph: agent → gate → approval → execute.
 
 The deep agent is one node; the gate is code; the approval is an `interrupt` the operator resumes with a
 `Decision`; execution is a deterministic stub — no model ever reaches it. A rejection returns to the agent."""

@@ -1,4 +1,4 @@
-"""logic.agent: InsuranceAgent — the deep agent: an orchestrator and three subagents, each holding only its role's tools.
+"""logic/agent: InsuranceAgent — the deep agent: an orchestrator and three subagents, each holding only its role's tools.
 
 `ontologo` resolves terms and relations against the reference ontology (SPARQL, read-only); `consultas` reads one
 policy through a fixed, parameterized query — never free SPARQL over the data; `transacciones` proposes and
@@ -12,10 +12,13 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import StructuredTool
 from langgraph.graph.state import CompiledStateGraph
 
-from deeptrack.logic.ports import OntoPort
 from deeptrack.logic.proposal import ProposalMiddleware
 from deeptrack.logic.state import ChatState
 from deeptrack.models.proposal import LocalName
+from ports.ontology import OntologyPort
+
+### the ontologist's whitelist over the reference server: it reads, it never loads.
+READ_TOOLS: Final[tuple[str, ...]] = ("onto_query", "onto_stats")
 
 PROMPT: Final[str] = """Eres el orquestador de un asistente de seguros. Delegas con la herramienta `task`:
 - `ontologo` antes de usar un término o relación del dominio que no tengas resuelto: no inventes relaciones.
@@ -45,23 +48,26 @@ SELECT ?asegurado ?ramo ?desde ?hasta ?cobertura ?siniestro ?abierto WHERE {{
 
 
 class InsuranceAgent:
-    """The deep agent over a chat model and the ontology port."""
+    """The deep agent over a chat model and the reference ontology server."""
 
-    __slots__ = ("_model", "_onto")
+    __slots__ = ("_model", "_reference")
 
-    def __init__(self, model: BaseChatModel, onto: OntoPort) -> None:
+    def __init__(self, model: BaseChatModel, reference: OntologyPort) -> None:
         self._model = model
-        self._onto = onto
+        self._reference = reference
 
     ############################################################
 
     async def policy(self, poliza: str) -> str:
         """Lee una póliza por su nombre local (p. ej. pol-1001): asegurado, ramo, vigencia, coberturas y siniestros."""
-        return await self._onto.query(POLICY.format(name=msgspec.convert(poliza, LocalName)))
+        return await self._reference.call(
+            "onto_query", {"query": POLICY.format(name=msgspec.convert(poliza, LocalName))}
+        )
 
     def build(self) -> CompiledStateGraph:
         """The compiled deep agent, ready to mount as the outer graph's `agent` node."""
         consult = StructuredTool.from_function(coroutine=self.policy, name="consultar_poliza", handle_tool_error=True)
+        reading = [self._reference.tools[name] for name in READ_TOOLS if name in self._reference.tools]
         return create_deep_agent(
             model=self._model,
             system_prompt=PROMPT,
@@ -72,7 +78,7 @@ class InsuranceAgent:
                     "name": "ontologo",
                     "description": "Resuelve términos y relaciones del dominio seguros contra la ontología.",
                     "system_prompt": ONTOLOGO,
-                    "tools": list(self._onto.tools),
+                    "tools": reading,
                 },
                 {
                     "name": "consultas",

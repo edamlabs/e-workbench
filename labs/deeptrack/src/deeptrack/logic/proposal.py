@@ -1,4 +1,4 @@
-"""logic.proposal: ProposalMiddleware — the only door to `propuesta`, and the tools that walk through it.
+"""logic/proposal: ProposalMiddleware — the only door to `propuesta`, and the tools that walk through it.
 
 Mounted on the transactions subagent alone: its state schema adds the key, its tools write it through a
 `Command`, and deepagents carries the key back up to the orchestrator when the subagent returns. A proposal that
