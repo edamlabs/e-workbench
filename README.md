@@ -33,7 +33,7 @@ family = "infra"    # what it is
 
 | `family` | Is | Projects |
 | --- | --- | --- |
-| `eager` | the eager series: EDamLabs' own products, the `e-` line | e-serde, e-voice |
+| `eager` | the eager series: EDamLabs' own products, the `e-` line | e-serde, e-track, e-voice |
 | `binding` | a Python binding of a third-party engine, kept compatible with its upstream | rtrafilatura, anytomd, gliner |
 | `infra` | the organisation's own machinery | e-workbench |
 

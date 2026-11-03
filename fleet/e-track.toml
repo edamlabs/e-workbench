@@ -1,0 +1,49 @@
+# Maintenance contract of edamlabs/e-track (moved out of e-workbench/labs/etrack on 2026-11-03).
+repo = "edamlabs/e-track"
+kind = "lib"
+family = "eager"
+modules = ["deps", "security", "drift", "release", "docs", "community"]
+
+[deps]
+lockfiles = ["uv.lock"]
+
+[[deps.watch]]
+name = "langgraph"
+repo = "https://github.com/langchain-ai/langgraph"
+registry = "https://pypi.org/project/langgraph/"
+license = "MIT"
+
+[[deps.watch]]
+name = "langchain-core"
+repo = "https://github.com/langchain-ai/langchain"
+registry = "https://pypi.org/project/langchain-core/"
+license = "MIT"
+
+[[deps.watch]]
+name = "opentelemetry-sdk"
+repo = "https://github.com/open-telemetry/opentelemetry-python"
+registry = "https://pypi.org/project/opentelemetry-sdk/"
+license = "Apache-2.0"
+
+[[deps.watch]]
+name = "structlog"
+repo = "https://github.com/hynek/structlog"
+registry = "https://pypi.org/project/structlog/"
+
+[[deps.watch]]
+name = "msgspec"
+repo = "https://github.com/msgspec/msgspec"
+registry = "https://pypi.org/project/msgspec/"
+license = "BSD-3-Clause"
+
+[[deps.watch]]
+name = "anyio"
+repo = "https://github.com/agronholm/anyio"
+registry = "https://pypi.org/project/anyio/"
+license = "MIT"
+
+[[deps.watch]]
+name = "rustworkx"
+repo = "https://github.com/Qiskit/rustworkx"
+registry = "https://pypi.org/project/rustworkx/"
+license = "Apache-2.0"
