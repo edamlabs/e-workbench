@@ -1,9 +1,11 @@
 """The outer graph's routes, driven by a scripted model: no proposal, approve, reject, violation."""
 
+import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
+from deeptrack.logic.graph import ChatGraph
 from deeptrack.models.proposal import Decision
 
 CONFIG: RunnableConfig = {"configurable": {"thread_id": "t"}, "recursion_limit": 80}
@@ -44,3 +46,26 @@ async def test_graph_violation_feeds_back(compiled, proposing) -> None:
     assert done.values["errores"][0]["message"] == "fuera de vigencia"
     assert any(getattr(each, "name", "") == "validador" for each in done.values["messages"])
     assert done.values["messages"][-1].text.startswith("No procede")
+
+
+@pytest.mark.parametrize(
+    ("answer", "decision"),
+    [("aprobar", Decision.APROBAR), ({"decision": "rechazar"}, Decision.RECHAZAR)],
+    ids=["cli-value", "ui-payload"],
+)
+def test_graph_decision_reads_both_drivers(answer: object, decision: Decision) -> None:
+    assert ChatGraph._build_decision(answer) is decision
+
+
+@pytest.mark.parametrize("answer", ["quizás", {"approved": True}, None], ids=["unknown", "foreign-shape", "none"])
+def test_graph_decision_refuses_the_rest(answer: object) -> None:
+    with pytest.raises(ValueError, match=r"Decision|valid"):
+        ChatGraph._build_decision(answer)
+
+
+def test_graph_execute_never_reaches_a_model() -> None:
+    done = ChatGraph._build_execute(
+        {"messages": [], "propuesta": {"type": "endoso", "poliza": "pol-1001", "quita": "cob-rc"}}
+    )
+    assert done["propuesta"] is None
+    assert done["messages"][0].text.startswith("Transacción registrada (stub, sin core)")

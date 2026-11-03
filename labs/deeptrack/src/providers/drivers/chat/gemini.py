@@ -5,7 +5,6 @@ the key is passed explicitly, so a stale `GOOGLE_API_KEY` in the environment nev
 
 from typing import ClassVar, Self
 
-from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 
 from infra.config.providers.drivers.chat.gemini import GeminiSettings
@@ -13,6 +12,7 @@ from infra.errors import ModelError
 from infra.logger import logger
 from infra.settings import settings as st
 from ports.provider import Isolation, Locality, ProviderSpec, Workload
+from providers.drivers.chat.google import ChatGoogle
 
 
 class GeminiChatDriver:
@@ -26,7 +26,7 @@ class GeminiChatDriver:
 
     def __init__(self, settings: GeminiSettings | None = None) -> None:
         self._settings = settings
-        self._model: BaseChatModel | None = None
+        self._model: ChatGoogle | None = None
 
     ############################################################
 
@@ -37,11 +37,16 @@ class GeminiChatDriver:
                 msg = "gemini: no GEMINI_API_KEY in the repository's or the lab's .env"
                 raise ModelError(msg)
             case _:
-                self._model = init_chat_model(config.ref, **config.kwargs)
+                self._model = ChatGoogle(model=config.ref.removeprefix("google_genai:"), **config.kwargs)
         logger.info("chat open", driver="gemini", model=config.ref)
         return self
 
     async def __aexit__(self, *exc: object) -> None:
+        match self._model:
+            case ChatGoogle() as model:
+                await model.aclose()
+            case None:
+                pass
         self._model = None
         logger.info("chat closed", driver="gemini")
 

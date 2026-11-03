@@ -7,9 +7,9 @@ nothing else. No agent holds a tool that executes: execution is a node of the ou
 from typing import Final
 
 import msgspec
-from deepagents import create_deep_agent
+from deepagents import SubAgent, create_deep_agent
 from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import StructuredTool, ToolException
 from langgraph.graph.state import CompiledStateGraph
 
 from deeptrack.logic.proposal import ProposalMiddleware
@@ -35,15 +35,21 @@ propiedades exactas (nombre local y significado). Nunca supones una relación qu
 CONSULTAS: Final[str] = """Eres el analista de consultas. Lees una póliza con `consultar_poliza` (nombre local, p. ej.
 pol-1001) y respondes con lo que devuelve: asegurado, ramo, vigencia, coberturas y siniestros. No inventas datos."""
 
-TRANSACCIONES: Final[str] = """Eres el gestor de transacciones. Solo propones: `proponer_denuncia` o `proponer_endoso`,
-con nombres locales exactos (pol-1001, cob-robo) y fechas ISO. Nunca afirmas que algo se ejecutó."""
+TRANSACCIONES: Final[str] = """Eres el gestor de transacciones. Solo propones: `proponer_denuncia` o `proponer_endoso`.
+Antes de proponer, lee la póliza con `consultar_poliza` y usa exactamente los nombres locales que devuelve (columna
+`cobertura`, p. ej. cob-rc; nunca la etiqueta) y fechas ISO. Si una herramienta devuelve un error, corrige y reintenta.
+Nunca afirmas que algo se ejecutó."""
 
+### local names (`cob-rc`) beside the labels: what the proposing tools take is exactly what this returns.
 POLICY: Final[str] = """PREFIX seg: <https://deeptrack.lab/seguros#>
-SELECT ?asegurado ?ramo ?desde ?hasta ?cobertura ?siniestro ?abierto WHERE {{
+SELECT ?asegurado ?ramo ?desde ?hasta ?cobertura ?coberturaNombre ?siniestro ?siniestroCobertura ?abierto WHERE {{
   seg:{name} a seg:Poliza ; seg:asegurado/seg:nombre ?asegurado ; seg:ramo/seg:nombre ?ramo ;
              seg:vigenciaDesde ?desde ; seg:vigenciaHasta ?hasta .
-  OPTIONAL {{ seg:{name} seg:cubre/seg:nombre ?cobertura }}
-  OPTIONAL {{ ?s seg:poliza seg:{name} ; seg:abierto ?abierto . BIND(STRAFTER(STR(?s), "#") AS ?siniestro) }}
+  OPTIONAL {{ seg:{name} seg:cubre ?c . ?c seg:nombre ?coberturaNombre . BIND(STRAFTER(STR(?c), "#") AS ?cobertura) }}
+  OPTIONAL {{
+    ?s seg:poliza seg:{name} ; seg:abierto ?abierto ; seg:cobertura ?sc .
+    BIND(STRAFTER(STR(?s), "#") AS ?siniestro) BIND(STRAFTER(STR(?sc), "#") AS ?siniestroCobertura)
+  }}
 }}"""
 
 
@@ -59,39 +65,44 @@ class InsuranceAgent:
     ############################################################
 
     async def policy(self, poliza: str) -> str:
-        """Lee una póliza por su nombre local (p. ej. pol-1001): asegurado, ramo, vigencia, coberturas y siniestros."""
-        return await self._reference.call(
-            "onto_query", {"query": POLICY.format(name=msgspec.convert(poliza, LocalName))}
-        )
+        """Lee una póliza por su nombre local (p. ej. pol-1001): asegurado, ramo, vigencia, coberturas (nombre local y
+        etiqueta) y siniestros con la cobertura afectada."""
+        try:
+            name = msgspec.convert(poliza, LocalName)
+        except msgspec.ValidationError as error:
+            msg = f"«{poliza}» no es un nombre local de póliza: usa la forma pol-1001."
+            raise ToolException(msg) from error
+        return await self._reference.call("onto_query", {"query": POLICY.format(name=name)})
+
+    def subagents(self) -> list[SubAgent]:
+        """The three roles, each with exactly its tools: the ontologist reads the ontology, the analyst reads one policy,
+        the transactions manager reads one policy and proposes."""
+        consult = StructuredTool.from_function(coroutine=self.policy, name="consultar_poliza", handle_tool_error=True)
+        reading = [self._reference.tools[name] for name in READ_TOOLS if name in self._reference.tools]
+        return [
+            {
+                "name": "ontologo",
+                "description": "Resuelve términos y relaciones del dominio seguros contra la ontología.",
+                "system_prompt": ONTOLOGO,
+                "tools": reading,
+            },
+            {
+                "name": "consultas",
+                "description": "Lee pólizas, coberturas y siniestros.",
+                "system_prompt": CONSULTAS,
+                "tools": [consult],
+            },
+            {
+                "name": "transacciones",
+                "description": "Propone denuncias de siniestro y endosos; nunca ejecuta.",
+                "system_prompt": TRANSACCIONES,
+                "tools": [consult],
+                "middleware": [ProposalMiddleware()],
+            },
+        ]
 
     def build(self) -> CompiledStateGraph:
         """The compiled deep agent, ready to mount as the outer graph's `agent` node."""
-        consult = StructuredTool.from_function(coroutine=self.policy, name="consultar_poliza", handle_tool_error=True)
-        reading = [self._reference.tools[name] for name in READ_TOOLS if name in self._reference.tools]
         return create_deep_agent(
-            model=self._model,
-            system_prompt=PROMPT,
-            state_schema=ChatState,
-            name="agent",
-            subagents=[
-                {
-                    "name": "ontologo",
-                    "description": "Resuelve términos y relaciones del dominio seguros contra la ontología.",
-                    "system_prompt": ONTOLOGO,
-                    "tools": reading,
-                },
-                {
-                    "name": "consultas",
-                    "description": "Lee pólizas, coberturas y siniestros.",
-                    "system_prompt": CONSULTAS,
-                    "tools": [consult],
-                },
-                {
-                    "name": "transacciones",
-                    "description": "Propone denuncias de siniestro y endosos; nunca ejecuta.",
-                    "system_prompt": TRANSACCIONES,
-                    "tools": [],
-                    "middleware": [ProposalMiddleware()],
-                },
-            ],
+            model=self._model, system_prompt=PROMPT, state_schema=ChatState, name="agent", subagents=self.subagents()
         )

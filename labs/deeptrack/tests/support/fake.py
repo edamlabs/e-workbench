@@ -1,23 +1,51 @@
 """Test doubles: a scripted chat model and its provider, and an ontology server with scripted SHACL verdicts."""
 
 import json
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any, ClassVar, Self
 
+from langchain_core.callbacks import BaseCallbackHandler, CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
+from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, StructuredTool
 
 from ports.provider import Isolation, Locality, ProviderSpec, Workload
 
 
 class ScriptedModel(GenericFakeChatModel):
-    """Answers with the scripted messages in order; tools are accepted and ignored — the script already calls them."""
+    """Answers with the scripted messages in order; tools are accepted and ignored — the script already calls them.
+
+    Streams like a real provider: one chunk per message, text and tool calls together (the stock fake streams nothing
+    for a tool-call-only message, which is exactly what an agent's model mostly says)."""
 
     def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> Self:
         return self
+
+    def _stream(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        said = next(self.messages)
+        message = AIMessage(said) if isinstance(said, str) else said
+        calls = [
+            {
+                "name": call["name"],
+                "args": json.dumps(call["args"]),
+                "id": call["id"],
+                "index": index,
+                "type": "tool_call_chunk",
+            }
+            for index, call in enumerate(message.tool_calls)
+        ]
+        chunk = ChatGenerationChunk(message=AIMessageChunk(content=message.content, tool_call_chunks=calls))
+        run_manager.on_llm_new_token(message.text, chunk=chunk) if run_manager else None
+        yield chunk
 
 
 def script(*messages: AIMessage | str) -> ScriptedModel:
@@ -87,3 +115,47 @@ class FakeOntology:
                 return json.dumps({"conforms": conforms, "violation_count": len(broken), "violations": broken})
             case _:
                 return "{}"
+
+
+class FakeTrace:
+    """A `TracePort` that records nothing: derived ids, a handler that listens to nothing, a session marker."""
+
+    spec: ClassVar[ProviderSpec] = ProviderSpec("fake", Locality.EMBEDDED, Workload.CPU_BOUND, Isolation.LOOP)
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+    async def health(self) -> bool:
+        return True
+
+    def trace_id(self, run_id: str) -> str:
+        return f"trace-{run_id}"
+
+    def handler(self, run_id: str) -> BaseCallbackHandler:
+        return BaseCallbackHandler()
+
+    def url(self, trace_id: str) -> str:
+        return f"http://trace/{trace_id}"
+
+    def session(self, thread: str) -> dict[str, str]:
+        return {"session": thread}
+
+    async def flush(self) -> None:
+        return None
+
+
+class ToolOntology(FakeOntology):
+    """A fake ontology server that advertises tools by name — what the agent's whitelist filters."""
+
+    def __init__(self, names: Iterable[str]) -> None:
+        super().__init__()
+        self._tools = {
+            name: StructuredTool.from_function(func=lambda: "", name=name, description=name) for name in names
+        }
+
+    @property
+    def tools(self) -> Mapping[str, BaseTool]:
+        return self._tools

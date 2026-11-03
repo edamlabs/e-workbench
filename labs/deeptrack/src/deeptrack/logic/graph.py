@@ -65,7 +65,7 @@ class ChatGraph:
         return ROUTES[decision](state)
 
     @staticmethod
-    def _build_execute(state: ChatState) -> dict[str, object]:
+    def _build_execute(state: ChatState) -> ChatState:
         done = f"Transacción registrada (stub, sin core): {json.dumps(state.get('propuesta'), ensure_ascii=False)}"
         return {"propuesta": None, "messages": [AIMessage(done)]}
 

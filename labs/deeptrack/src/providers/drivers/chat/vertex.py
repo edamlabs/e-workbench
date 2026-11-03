@@ -6,7 +6,6 @@ The work happens in Google's service: a driver. Credentials are ADC; a process w
 from typing import ClassVar, Self
 
 from google.auth.exceptions import DefaultCredentialsError
-from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 
 from infra.config.providers.drivers.chat.vertex import VertexSettings
@@ -14,6 +13,7 @@ from infra.errors import ModelError
 from infra.logger import logger
 from infra.settings import settings as st
 from ports.provider import Isolation, Locality, ProviderSpec, Workload
+from providers.drivers.chat.google import ChatGoogle
 
 
 class VertexChatDriver:
@@ -27,14 +27,14 @@ class VertexChatDriver:
 
     def __init__(self, settings: VertexSettings | None = None) -> None:
         self._settings = settings
-        self._model: BaseChatModel | None = None
+        self._model: ChatGoogle | None = None
 
     ############################################################
 
     async def __aenter__(self) -> Self:
         config: VertexSettings = self._settings or st.providers.drivers.chat.vertex
         try:
-            self._model = init_chat_model(config.ref, **config.kwargs)
+            self._model = ChatGoogle(model=config.ref.removeprefix("google_genai:"), **config.kwargs)
         except DefaultCredentialsError as error:
             msg = f"vertex: no application default credentials ({error})"
             raise ModelError(msg) from error
@@ -42,6 +42,11 @@ class VertexChatDriver:
         return self
 
     async def __aexit__(self, *exc: object) -> None:
+        match self._model:
+            case ChatGoogle() as model:
+                await model.aclose()
+            case None:
+                pass
         self._model = None
         logger.info("chat closed", driver="vertex")
 

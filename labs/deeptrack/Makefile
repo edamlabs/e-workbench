@@ -43,8 +43,11 @@ arch:             ## tach import contracts
 test:             ## unit suite, no services needed
 	uv run pytest -q -p no:tach
 
-integration:      ## scripted turns against the live stack (make stack first)
-	uv run pytest -q -p no:tach -m integration
+integration:      ## scripted turns against the live stack (make stack first), no model
+	uv run pytest -q -p no:tach -m "integration and not llm"
+
+questions:        ## PREGUNTAS.md on the real model and the live stack — structural assertions
+	uv run pytest -q -p no:tach -m llm -rA
 
 check: lint types arch test ## the full local gate
 
@@ -54,4 +57,4 @@ tools:            ## each ontology server's tools and schemas
 chat:             ## talk to the agents (needs Vertex creds: see .env.example)
 	uv run deeptrack chat
 
-.PHONY: help sync env stack dev down purge lint types arch test integration check tools chat
+.PHONY: help sync env stack dev down questions purge lint types arch test integration check tools chat
