@@ -1,6 +1,4 @@
 .DEFAULT_GOAL := help
-ARKHETYPO ?= $(HOME)/workspaces/damien/e-arkhetypo
-LANGFUSE := $(ARKHETYPO)/stack/watch/langfuse/compose.yml
 
 help:             ## list targets
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -8,13 +6,17 @@ help:             ## list targets
 sync:             ## install the environment
 	uv sync
 
-stack:            ## Langfuse (house stack) + ontoref/ontoval, detached
-	docker compose -f $(LANGFUSE) up -d
-	docker compose up -d
+env:              ## create .env from .env.example if missing
+	@test -f .env || cp .env.example .env
 
-down:             ## stop the lab's servers and Langfuse
+stack: env        ## the lab's stack (labs-*), detached, waiting until healthy
+	docker compose up -d --wait
+
+down:             ## stop the lab's stack, keep its volumes
 	docker compose down
-	docker compose -f $(LANGFUSE) down
+
+purge:            ## stop the lab's stack and delete its volumes
+	docker compose down -v
 
 lint:             ## ruff check + format check
 	uv run ruff check .
@@ -30,7 +32,7 @@ test:             ## unit suite, no services needed
 	uv run pytest -q -p no:tach
 
 integration:      ## scripted turns against the live stack (make stack first)
-	uv run pytest -q -p no:tach -m integration
+	uv run --env-file .env pytest -q -p no:tach -m integration
 
 check: lint types arch test ## the full local gate
 
@@ -40,4 +42,4 @@ tools:            ## each ontology server's tools and schemas
 chat:             ## talk to the agents (needs Vertex creds: see .env.example)
 	uv run --env-file .env deeptrack chat
 
-.PHONY: help sync stack down lint types arch test integration check tools chat
+.PHONY: help sync env stack down purge lint types arch test integration check tools chat

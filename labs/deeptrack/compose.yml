@@ -1,39 +1,190 @@
-# deeptrack — los dos servidores Open Ontologies del lab (MCP Streamable HTTP, store en memoria).
-# ontoref: la ontología de referencia que el agente consulta; ontoval: la copia donde el gate valida.
-# Cada uno anuncia solo su lista blanca (--tools-allow): el agente no puede ni ver una herramienta que escribe.
-# Langfuse vive en e-arkhetypo: stack/watch/langfuse (make stack levanta ambos).
+# deeptrack — the lab's whole stack, one file. Every container is `labs-<service>`, on the `labs` network.
+# Host ports: the reserved block 28100–28199 (below the kernel's ephemeral range, clear of e-arkhetypo's stack).
+# Only what a client on the host talks to is published: Langfuse's web/API/OTLP and the two ontology servers.
+# Variables: `.env` (from .env.example) — read by compose here and by the app (`uv run --env-file .env`).
+#
+# Langfuse v4 needs, and gets, exactly: web, worker, postgres, clickhouse, redis, and S3 (minio) for event
+# uploads — mandatory upstream. Media upload is not used, so minio is not published.
+
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: http://localhost:${LABS_LANGFUSE_PORT:-28100}
+  DATABASE_URL: postgresql://postgres:${LABS_PG_PASSWORD:-postgres}@labs-postgres:5432/postgres
+  SALT: ${LABS_LANGFUSE_SALT:-labs-salt}
+  ENCRYPTION_KEY: ${LABS_LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+  TELEMETRY_ENABLED: "false"
+  CLICKHOUSE_MIGRATION_URL: clickhouse://labs-clickhouse:9000
+  CLICKHOUSE_URL: http://labs-clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: ${LABS_CH_PASSWORD:-clickhouse}
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LABS_MINIO_PASSWORD:-miniosecret}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://labs-minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  REDIS_HOST: labs-redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: ${LABS_REDIS_PASSWORD:-redissecret}
+
+x-langfuse-deps: &langfuse-deps
+  labs-postgres:
+    condition: service_healthy
+  labs-clickhouse:
+    condition: service_healthy
+  labs-redis:
+    condition: service_healthy
+  labs-minio:
+    condition: service_healthy
+
 x-onto: &onto
   image: ghcr.io/fabio-rovai/open-ontologies:latest
   restart: unless-stopped
   environment:
     OPEN_ONTOLOGIES_HTTP_HOST: 0.0.0.0
     OPEN_ONTOLOGIES_HTTP_PORT: "8080"
-  networks:
-    - stack
+  networks: [labs]
+
+name: labs
 
 services:
-  ontoref:
-    <<: *onto
-    container_name: ontoref
-    hostname: ontoref
-    command: ["serve-http", "--tools-allow", "onto_load,onto_query,onto_stats"]
-    labels:
-      stack.category: "gdb"
-      stack.port: "8080"
+  ##### LANGFUSE #####
+  labs-langfuse:
+    image: docker.langfuse.com/langfuse/langfuse:4
+    container_name: labs-langfuse
+    hostname: labs-langfuse
+    restart: unless-stopped
+    depends_on: *langfuse-deps
     ports:
-      - "127.0.0.1:${ONTOREF_PORT:-8080}:8080"
+      - "127.0.0.1:${LABS_LANGFUSE_PORT:-28100}:3000"  # UI + API + OTLP/HTTP (/api/public/otel)
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${LABS_LANGFUSE_NEXTAUTH_SECRET:-labs-nextauth}
+      LANGFUSE_INIT_ORG_ID: labs
+      LANGFUSE_INIT_ORG_NAME: labs
+      LANGFUSE_INIT_PROJECT_ID: ${LABS_LANGFUSE_PROJECT:-deeptrack}
+      LANGFUSE_INIT_PROJECT_NAME: ${LABS_LANGFUSE_PROJECT:-deeptrack}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LABS_LANGFUSE_PUBLIC_KEY:-pk-lf-labs}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LABS_LANGFUSE_SECRET_KEY:-sk-lf-labs}
+      LANGFUSE_INIT_USER_EMAIL: ${LABS_LANGFUSE_USER_EMAIL:-admin@labs.local}
+      LANGFUSE_INIT_USER_NAME: admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LABS_LANGFUSE_USER_PASSWORD:-labs-admin}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://$${HOSTNAME}:3000/api/public/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks: [labs]
 
-  ontoval:
+  labs-langfuse-worker:
+    image: docker.langfuse.com/langfuse/langfuse-worker:4
+    container_name: labs-langfuse-worker
+    hostname: labs-langfuse-worker
+    restart: unless-stopped
+    depends_on: *langfuse-deps
+    environment: *langfuse-env
+    networks: [labs]
+
+  labs-postgres:
+    image: postgres:17
+    container_name: labs-postgres
+    hostname: labs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LABS_PG_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - labs-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks: [labs]
+
+  labs-clickhouse:
+    image: clickhouse/clickhouse-server:26.3.62.3  # upstream pin: Langfuse's migrations fix the version
+    container_name: labs-clickhouse
+    hostname: labs-clickhouse
+    restart: unless-stopped
+    stop_grace_period: 10s
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LABS_CH_PASSWORD:-clickhouse}
+    volumes:
+      - labs-clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [labs]
+
+  labs-redis:
+    image: redis:7
+    container_name: labs-redis
+    hostname: labs-redis
+    restart: unless-stopped
+    command: --requirepass ${LABS_REDIS_PASSWORD:-redissecret} --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${LABS_REDIS_PASSWORD:-redissecret}
+    networks: [labs]
+
+  labs-minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: labs-minio
+    hostname: labs-minio
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${LABS_MINIO_PASSWORD:-miniosecret}
+    volumes:
+      - labs-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    networks: [labs]
+
+  ##### ONTOLOGIES #####
+  # ontoref: the reference the agent reads; ontoval: the copy the gate clears and judges.
+  # Each advertises only its whitelist (--tools-allow): the agent cannot even see a tool that writes.
+  labs-ontoref:
     <<: *onto
-    container_name: ontoval
-    hostname: ontoval
-    command: ["serve-http", "--tools-allow", "onto_clear,onto_load,onto_shacl,onto_stats"]
-    labels:
-      stack.category: "gdb"
-      stack.port: "8081"
+    container_name: labs-ontoref
+    hostname: labs-ontoref
+    command: ["serve-http", "--tools-allow", "onto_load,onto_query,onto_stats"]
     ports:
-      - "127.0.0.1:${ONTOVAL_PORT:-8081}:8080"
+      - "127.0.0.1:${LABS_ONTOREF_PORT:-28101}:8080"
+
+  labs-ontoval:
+    <<: *onto
+    container_name: labs-ontoval
+    hostname: labs-ontoval
+    command: ["serve-http", "--tools-allow", "onto_clear,onto_load,onto_shacl,onto_stats"]
+    ports:
+      - "127.0.0.1:${LABS_ONTOVAL_PORT:-28102}:8080"
+
+volumes:
+  labs-postgres-data:
+  labs-clickhouse-data:
+  labs-minio-data:
 
 networks:
-  stack:
-    name: stack
+  labs:
+    name: labs
