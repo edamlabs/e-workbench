@@ -9,29 +9,29 @@ root_module = "forbid"
 unused_ignore_directives = "error"
 
 [[modules]]
-path = "esteward"
-depends_on = ["esteward.cli"]
+path = "e_workbench"
+depends_on = ["e_workbench.cli"]
 
 [[modules]]
-path = "esteward.models"
+path = "e_workbench.models"
 depends_on = []
 
 [[modules]]
-path = "esteward.ops"
+path = "e_workbench.ops"
 depends_on = []
 
 [[modules]]
-path = "esteward.logic"
-depends_on = ["esteward.models", "esteward.ops"]
+path = "e_workbench.logic"
+depends_on = ["e_workbench.models", "e_workbench.ops"]
 
 [[modules]]
-path = "esteward.adapters"
-depends_on = ["esteward.models"]
+path = "e_workbench.adapters"
+depends_on = ["e_workbench.models"]
 
 [[modules]]
-path = "esteward.core"
-depends_on = ["esteward.adapters", "esteward.logic"]
+path = "e_workbench.core"
+depends_on = ["e_workbench.adapters", "e_workbench.logic"]
 
 [[modules]]
-path = "esteward.cli"
-depends_on = ["esteward.core", "esteward.logic", "esteward.models"]
+path = "e_workbench.cli"
+depends_on = ["e_workbench.core", "e_workbench.logic", "e_workbench.models"]

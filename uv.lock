@@ -140,7 +140,7 @@ wheels = [
 ]
 
 [[package]]
-name = "esteward"
+name = "e-workbench"
 source = { editable = "." }
 dependencies = [
     { name = "beartype" },

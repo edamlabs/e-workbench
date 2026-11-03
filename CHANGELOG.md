@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to esteward are documented here. The format follows
+All notable changes to e-workbench are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -11,7 +11,8 @@ milestones it has reached.
 
 ### Added
 
-- Fleet: `e-jev` onboarded (`edamlabs/e-jev`, service · eager, moved from `damvolkov` on 2026-10-28) with
+- `labs/`: the home of experiments bound sooner or later for production or another project.
+- Fleet (`TODO_jev`): `e-jev` onboarded (`edamlabs/e-jev`, service · eager, moved from `damvolkov` on 2026-10-28) with
   `deps`, `drift` and `community`; its manifest declares `[tool.edamlabs]` and `drift` reports ok.
   `security`, `docs` and `release` stay off until the repo carries workflows and a docs site — its image is
   still a private user package, `ghcr.io/damvolkov/e-jev`.
@@ -24,9 +25,11 @@ milestones it has reached.
 
 ### Changed
 
+- Renamed esteward → e-workbench (`TODO_workbench`): distribution and CLI `e-workbench`, package `e_workbench`,
+  environment prefix `E_WORKBENCH_`; issue labels, act/release branches, issue markers and bot identity follow.
 - Detached from the personal toolchain: the engine's public record no longer names it. The decision log
   speaks of "the personal toolchain" and "a private blueprint repository" where it named the repositories;
-  the blueprint's pending work left `TODO.md` — it belongs to that repository's own plan, not to the
+  the blueprint's pending work left the backlog plan — it belongs to that repository's own plan, not to the
   watcher's. Done in `TODO_detach`.
 - README: badge layout, description and identity line standardized on the e-serde template; the verdict ladder
-  kept as its own table under the identity line. Done in `TODO_standardize_readme` across the fleet.
+  kept as its own table under the identity line. Done in `TODO_README` and `TODO_fleetreadme` across the fleet.

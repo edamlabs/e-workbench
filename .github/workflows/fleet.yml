@@ -36,7 +36,7 @@ jobs:
             test -f "fleet/$ONLY.toml"
             echo "projects=[\"$ONLY\"]" >> "$GITHUB_OUTPUT"
           else
-            echo "projects=$(uv run --frozen esteward fleet)" >> "$GITHUB_OUTPUT"
+            echo "projects=$(uv run --frozen e-workbench fleet)" >> "$GITHUB_OUTPUT"
           fi
 
   run:
@@ -70,9 +70,9 @@ jobs:
       - name: Run and publish
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-          ESTEWARD_ENV: prod
+          E_WORKBENCH_ENV: prod
           PROJECT: ${{ matrix.project }}
-        run: uv run --frozen esteward run "$PROJECT" --act --release --publish --report-dir reports
+        run: uv run --frozen e-workbench run "$PROJECT" --act --release --publish --report-dir reports
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: always()
         with:
