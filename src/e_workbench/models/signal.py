@@ -12,6 +12,9 @@ class RepositorySignal:
     archived: bool
     pushed_at: datetime | None
     moved_to: str | None = None
+    description: str = ""
+    topics: tuple[str, ...] = ()
+    homepage: str = ""
 
 
 @dataclass(frozen=True, slots=True)

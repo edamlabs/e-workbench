@@ -153,14 +153,22 @@ class GithubAdapter:
     ##### PUBLIC #####
 
     async def repository(self, slug: str) -> RepositorySignal | None:
-        """Archived flag and last push of a repository; None when it does not exist."""
+        """Archived flag, last push and public identity (About) of a repository; None when it does not exist."""
         match await self._common_get(f"/repos/{slug}"):
             case None:
                 return None
             case response:
                 data = await response.json()
                 moved = data["full_name"] if data["full_name"].lower() != slug.lower() else None
-                return RepositorySignal(slug, bool(data["archived"]), self._common_moment(data.get("pushed_at")), moved)
+                return RepositorySignal(
+                    slug,
+                    bool(data["archived"]),
+                    self._common_moment(data.get("pushed_at")),
+                    moved,
+                    description=data.get("description") or "",
+                    topics=tuple(data.get("topics") or ()),
+                    homepage=data.get("homepage") or "",
+                )
 
     async def file(self, slug: str, path: str) -> str | None:
         """Raw content of a file on the default branch; None when absent."""
