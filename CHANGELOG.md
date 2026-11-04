@@ -11,6 +11,12 @@ milestones it has reached.
 
 ### Added
 
+- drift checks each repository's public face against its manifest: GitHub's description equals the manifest's,
+  the topics hold every keyword (an eager project also `eager-stack`), the homepage is the documentation URL when one
+  is declared (`pyproject.toml [project]`, `Cargo.toml [package]` or `[workspace.package]`). A face that differs is
+  `act` with the exact `gh repo edit` to run; a manifest without description or keywords escalates. First fleet run
+  (2026-11-04): e-serde's description differs from its manifest, e-serde and e-track lacked the `e-stack` topic
+  (added to e-track), and e-voice, e-jev, e-workbench and gliner declare no keywords — e-voice no description either.
 - Fleet entry `fleet/e-track.toml`: edamlabs/e-track (lib, eager) — deps, security, drift, release, docs,
   community; the run-tracking library leaves `labs/etrack` for its own repository and PyPI.
 - `labs/`: the home of experiments bound sooner or later for production or another project.

@@ -120,9 +120,19 @@ def world(httpserver: HTTPServer, resources: Path) -> HTTPServer:
     )
     httpserver.expect_request(f"/repos/owner/action/commits/{SHA}").respond_with_data("", status=422)
     httpserver.expect_request("/repos/edamlabs/project/contents/pyproject.toml").respond_with_data(
+        '[project]\nname = "project"\ndescription = "A project."\nkeywords = ["python"]\n'
         '[tool.edamlabs]\nkind = "lib"\nfamily = "binding"\n'
     )
     httpserver.expect_request("/repos/edamlabs/project/contents/Cargo.toml").respond_with_data("", status=404)
+    httpserver.expect_request("/repos/edamlabs/project").respond_with_json(
+        {
+            "full_name": "edamlabs/project",
+            "archived": False,
+            "pushed_at": None,
+            "description": "A project.",
+            "topics": [],
+        }
+    )
     httpserver.expect_request("/repos/edamlabs/project/issues", method="GET").respond_with_json([])
     httpserver.expect_request("/repos/edamlabs/project/issues", method="POST").respond_with_json({}, status=201)
     return httpserver

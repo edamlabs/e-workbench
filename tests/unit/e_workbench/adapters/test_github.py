@@ -20,9 +20,23 @@ from tests.unit.e_workbench.adapters.conftest import (
 
 async def test_repository(httpserver: HTTPServer, github: GithubAdapter) -> None:
     httpserver.expect_request("/repos/o/r", headers={"Authorization": "Bearer secret-token"}).respond_with_json(
-        {"full_name": "o/r", "archived": True, "pushed_at": "2026-10-01T08:00:00Z"}
+        {
+            "full_name": "o/r",
+            "archived": True,
+            "pushed_at": "2026-10-01T08:00:00Z",
+            "description": "d",
+            "topics": ["python"],
+            "homepage": "https://docs",
+        }
     )
-    assert await github.repository("o/r") == RepositorySignal("o/r", True, datetime(2026, 10, 1, 8, 0, tzinfo=UTC))
+    assert await github.repository("o/r") == RepositorySignal(
+        "o/r",
+        True,
+        datetime(2026, 10, 1, 8, 0, tzinfo=UTC),
+        description="d",
+        topics=("python",),
+        homepage="https://docs",
+    )
 
 
 async def test_repository_anonymous(httpserver: HTTPServer, anonymous_github: GithubAdapter) -> None:
