@@ -1,0 +1,34 @@
+@prefix seg:  <https://deeptrack.lab/seguros#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<https://deeptrack.lab/seguros> a owl:Ontology ;
+    rdfs:label "Seguros — ontología de referencia del lab deeptrack"@es .
+
+##### CLASES #####
+seg:Poliza     a owl:Class ; rdfs:label "Póliza"@es ;     rdfs:comment "Contrato de seguro con vigencia, ramo y coberturas."@es .
+seg:Asegurado  a owl:Class ; rdfs:label "Asegurado"@es ;  rdfs:comment "Persona titular de una póliza, identificada por CUIT."@es .
+seg:Siniestro  a owl:Class ; rdfs:label "Siniestro"@es ;  rdfs:comment "Hecho denunciado contra exactamente una póliza."@es .
+seg:Cobertura  a owl:Class ; rdfs:label "Cobertura"@es ;  rdfs:comment "Riesgo cubierto por una póliza."@es .
+seg:Endoso     a owl:Class ; rdfs:label "Endoso"@es ;     rdfs:comment "Modificación de una póliza vigente."@es .
+seg:Ramo       a owl:Class ; rdfs:label "Ramo"@es ;       rdfs:comment "Línea de negocio: automotor, hogar, vida…"@es .
+seg:Productor  a owl:Class ; rdfs:label "Productor"@es ;  rdfs:comment "Intermediario que comercializa la póliza."@es .
+
+##### RELACIONES #####
+seg:asegurado     a owl:ObjectProperty ; rdfs:domain seg:Poliza ;    rdfs:range seg:Asegurado ; rdfs:label "asegurado"@es .
+seg:ramo          a owl:ObjectProperty ; rdfs:domain seg:Poliza ;    rdfs:range seg:Ramo ;      rdfs:label "ramo"@es .
+seg:productor     a owl:ObjectProperty ; rdfs:domain seg:Poliza ;    rdfs:range seg:Productor ; rdfs:label "productor"@es .
+seg:cubre         a owl:ObjectProperty ; rdfs:domain seg:Poliza ;    rdfs:range seg:Cobertura ; rdfs:label "cubre"@es .
+seg:poliza        a owl:ObjectProperty ; rdfs:domain seg:Siniestro ; rdfs:range seg:Poliza ;    rdfs:label "póliza del siniestro"@es .
+seg:cobertura     a owl:ObjectProperty ; rdfs:domain seg:Siniestro ; rdfs:range seg:Cobertura ; rdfs:label "cobertura afectada"@es .
+seg:endosa        a owl:ObjectProperty ; rdfs:domain seg:Endoso ;    rdfs:range seg:Poliza ;    rdfs:label "póliza endosada"@es .
+seg:quita         a owl:ObjectProperty ; rdfs:domain seg:Endoso ;    rdfs:range seg:Cobertura ; rdfs:label "cobertura que quita"@es .
+
+##### ATRIBUTOS #####
+seg:cuit            a owl:DatatypeProperty ; rdfs:domain seg:Asegurado ; rdfs:range xsd:string ;  rdfs:label "CUIT"@es .
+seg:nombre          a owl:DatatypeProperty ; rdfs:range xsd:string ;  rdfs:label "nombre"@es .
+seg:vigenciaDesde   a owl:DatatypeProperty ; rdfs:domain seg:Poliza ;    rdfs:range xsd:date ; rdfs:label "vigencia desde"@es .
+seg:vigenciaHasta   a owl:DatatypeProperty ; rdfs:domain seg:Poliza ;    rdfs:range xsd:date ; rdfs:label "vigencia hasta"@es .
+seg:fechaOcurrencia a owl:DatatypeProperty ; rdfs:domain seg:Siniestro ; rdfs:range xsd:date ; rdfs:label "fecha de ocurrencia"@es .
+seg:abierto         a owl:DatatypeProperty ; rdfs:domain seg:Siniestro ; rdfs:range xsd:boolean ; rdfs:label "abierto"@es .

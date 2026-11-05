@@ -15,7 +15,8 @@ hooks = [
 repo = "builtin"
 hooks = [
     { id = "check-toml" },
-    { id = "check-yaml" },
+    ### a pnpm lockfile is multi-document YAML (pnpm v10): parse every document, not just one.
+    { id = "check-yaml", args = ["--allow-multiple-documents"] },
     { id = "end-of-file-fixer" },
     { id = "trailing-whitespace" },
     { id = "check-merge-conflict" },

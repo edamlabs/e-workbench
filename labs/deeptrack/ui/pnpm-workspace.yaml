@@ -1,0 +1,3 @@
+# @scarf/scarf: install-time telemetry pulled in by a dependency — its build script never runs.
+allowBuilds:
+  "@scarf/scarf": false

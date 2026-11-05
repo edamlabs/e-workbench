@@ -11,3 +11,4 @@ reports/
 .workspaces/
 .plans/
 .serena/
+.env

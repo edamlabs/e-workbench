@@ -291,3 +291,55 @@ the process — spans and logs — with no query API to learn. The first e2e run
 
 **Rejected.** Langfuse as the sandbox (six containers; it is deeptrack's A/B, not etrack's contract); Jaeger (traces
 only, logs unverifiable); the collector's `debug` exporter read from container logs (unstructured).
+
+### 2026-11-03 · deeptrack's agents are data, the app has no project package
+
+**Decision.** Agents are markdown files outside the code (`labs/deeptrack/agents/`): YAML frontmatter (name,
+description, tier, tools, middleware, skills, subagents) and the instructions as the body; skills shared by name;
+siblings only, hierarchy declared in `subagents`. A provider-agnostic harness port (`AgentSpec`, `Agent`, `Roster`) is
+filled by a files driver and built by a deepagents adapter; the contract is checked at startup, intrinsic laws in the
+driver, cross-references in the build. `src/` has no project package: system folders sit at the level of `infra`.
+
+**Evidence.** Agent Skills (SKILL.md) and markdown-with-frontmatter agents are the convergent format (deepagents,
+Codex, Claude Code subagents); declarative YAML wiring is experimental in ADK, preview in Microsoft Agent Framework,
+in flux in CrewAI; marvin's Python-string prompts patched by `.replace()` fail silently. The migration was proven
+byte-identical per A/B arm (prompts, descriptions, tools, middleware), then 15/15 real-model questions and a 7/7
+holdout. Without the package wrapper, `state.services.chat` ≡ `services/chat.py` (OST) holds.
+
+**Rejected.** One directory per agent with code inside (couples data to code); nested subagents (reuse unknown, deep
+agents run one level); a declarative YAML for wiring (immature everywhere); the old silent drop of a tool a server
+does not advertise (law TOOL now stops the boot).
+
+### 2026-11-03 · Langfuse is fed from etrack's bus, not from its own handler
+
+**Decision.** deeptrack sends runs to Langfuse through etrack's `OtlpDriver` (Langfuse's OTLP endpoint) and drops
+Langfuse's `CallbackHandler`, once e-track 0.1.1 is published.
+
+**Evidence.** `make tracing` (`labs/deeptrack/tests/benchmark/tracing.py`): both arms on the same runs, Gemini 2.5 Flash,
+15 runs. Lag to a stable trace p50 1.04 s / p95 1.06 s in both (1 s poll); generations with usage 70/70 in both, tokens
+equal (211 414); subagents nested 10/10 in both; 4 fewer observations per run by the bus (plumbing folded); one orphan
+per run in the native arm (its root hangs from a span it never exports), none by the bus. The one lost row — cost,
+up to 2× native because cached input was priced at the full rate — was an e-track defect, fixed with exclusive usage
+buckets: after it, cost identical and 0/31 generations differ.
+
+**Rejected.** Keeping both (two traces per run, two ids to correlate); the native handler alone (an extra framework
+dependency per backend, orphaned roots). LangSmith not measured: no API key; self-hosted needs Enterprise.
+
+
+### 2026-11-03 · deeptrack's A/B arms are a service in the state tree, not lifespan helpers
+
+**Decision.** The per-arm assembly (roster with or without the ontologist, which validation the gate and the proposing
+tools run) is `services/arms.py` `ArmsService`, mounted at `state.services.arms`; the bench and the arm tests ask it
+for `chat(arm)`. Each lifespan module is one `lifespan` context manager (the e-arkhetypo form); the ontology and track
+branches have their own, entered by the providers lifespan. The engines branch holds both validations (`shacl`,
+`passing`); the arm→validation table lives once, in the service.
+
+**Evidence.** Audit against e-nous core 61db22f: tax-py-naming 4 (no loose functions outside `ops/` and dispatch)
+flagged `built`, `agent`, `chat`, `tracker`, `versions`, `opened`, `langfuse`, `track`, `ontology` and the CLI's
+`_chat_*`. After the change: 110 unit, 21 integration, ty and tach clean. ty 0.0.96 (latest) refuses a protocol whose
+`__aenter__` returns `Self` as an `AbstractAsyncContextManager` (`CoroutineType[..., ChatPort]` not assignable to
+itself): the sinks table is typed by its concretions and the injectable chat crosses with one reasoned `cast`; the
+graph's TypedDict schema crosses as `Any` for the same class of checker gap — no `ty: ignore` left.
+
+**Rejected.** Keeping a generic `opened[P]` helper (a loose function, the very finding); an arm parameter on the whole
+lifespan (the bench would reopen MCP sessions per arm and lose the shared warm stack); `ty: ignore` (banned).

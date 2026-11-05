@@ -1,0 +1,12 @@
+{
+  "source": "tests/benchmark/cases.json",
+  "holdout": [
+    "v-claim-1001-robo",
+    "v-endorse-3003-rc",
+    "v-claim-4004-in-term",
+    "i-before-term-1001",
+    "i-not-covered-3003-robo",
+    "i-no-policy-endorse",
+    "i-after-term-4004"
+  ]
+}

@@ -1,0 +1,112 @@
+##### ROOTS #####
+source_roots = ["src"]
+exclude = ["tests"]
+
+##### RULES #####
+forbid_circular_dependencies = true
+exact = true
+root_module = "forbid"
+
+##### LAYERS #####
+# Ordered high → low, as e-arkhetypo's graph: a layer may import lower layers, importing upward fails.
+# `app`: `main`, the AG-UI server (`api`) and the cli commands (`cli`) · `lifespan`: the composition root and the typed state branches it mounts — the
+# only place that names a concretion · `services`: the business · `logic`: the agents, the outer graph and its nodes
+# · then the vendored taxonomy: `execution` (engines, processors, providers' drivers — one horizontal layer, none
+# imports another), `ports` (one contract per capability), infra, ops, `errors` (the floor) and the lab's data.
+layers = ["app", "lifespan", "services", "logic", "execution", "ports", "infra", "ops", "errors", "models"]
+
+[rules]
+unused_ignore_directives = "error"
+
+##### MODULES #####
+[[modules]]
+path = "main"
+layer = "app"
+depends_on = ["cli"]
+
+[[modules]]
+path = "cli"
+layer = "app"
+depends_on = []
+
+[[modules]]
+path = "api"
+layer = "app"
+depends_on = []
+
+[[modules]]
+path = "infra.lifespan"
+layer = "lifespan"
+depends_on = ["providers.state", "engines.state", "services.state"]
+
+### each layer's typed branch of the state tree, beside the modules it mirrors; the lifespans and the doors read them.
+[[modules]]
+path = "providers.state"
+layer = "lifespan"
+depends_on = []
+
+[[modules]]
+path = "engines.state"
+layer = "lifespan"
+depends_on = []
+
+[[modules]]
+path = "services.state"
+layer = "lifespan"
+depends_on = []
+
+[[modules]]
+path = "services"
+layer = "services"
+depends_on = []
+
+[[modules]]
+path = "logic"
+layer = "logic"
+depends_on = []
+
+### the agents' tool surface: thin, one module per resource, over ports.
+[[modules]]
+path = "tools"
+layer = "logic"
+depends_on = []
+
+[[modules]]
+path = "providers.adapters"
+layer = "execution"
+depends_on = []
+
+[[modules]]
+path = "engines"
+layer = "execution"
+depends_on = []
+
+[[modules]]
+path = "providers.drivers"
+layer = "execution"
+depends_on = []
+
+[[modules]]
+path = "ports"
+layer = "ports"
+depends_on = []
+
+[[modules]]
+path = "infra"
+layer = "infra"
+depends_on = []
+
+[[modules]]
+path = "infra.errors"
+layer = "errors"
+depends_on = []
+
+[[modules]]
+path = "ops"
+layer = "ops"
+depends_on = []
+
+[[modules]]
+path = "models"
+layer = "models"
+depends_on = []

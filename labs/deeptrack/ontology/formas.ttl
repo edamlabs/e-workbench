@@ -1,0 +1,50 @@
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix seg: <https://deeptrack.lab/seguros#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+##### SINIESTRO #####
+seg:SiniestroShape a sh:NodeShape ;
+    sh:targetClass seg:Siniestro ;
+    sh:property [ sh:path seg:poliza ; sh:class seg:Poliza ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "Un siniestro tiene exactamente una póliza existente."@es ] ;
+    sh:property [ sh:path seg:fechaOcurrencia ; sh:datatype xsd:date ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "Un siniestro tiene una fecha de ocurrencia xsd:date."@es ] ;
+    sh:property [ sh:path seg:cobertura ; sh:class seg:Cobertura ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "Un siniestro afecta exactamente a una cobertura existente."@es ] ;
+    sh:sparql [
+        sh:message "La cobertura afectada no está contratada en la póliza."@es ;
+        sh:select """
+            PREFIX seg: <https://deeptrack.lab/seguros#>
+            SELECT $this WHERE {
+                $this seg:poliza ?p ; seg:cobertura ?c .
+                FILTER NOT EXISTS { ?p seg:cubre ?c }
+            }""" ] ;
+    sh:sparql [
+        sh:message "La fecha de ocurrencia cae fuera de la vigencia de la póliza."@es ;
+        sh:select """
+            PREFIX seg: <https://deeptrack.lab/seguros#>
+            SELECT $this WHERE {
+                $this seg:poliza ?p ; seg:fechaOcurrencia ?f .
+                ?p seg:vigenciaDesde ?d ; seg:vigenciaHasta ?h .
+                FILTER (?f < ?d || ?f > ?h)
+            }""" ] .
+
+##### ASEGURADO #####
+seg:AseguradoShape a sh:NodeShape ;
+    sh:targetClass seg:Asegurado ;
+    sh:property [ sh:path seg:cuit ; sh:datatype xsd:string ; sh:pattern "^[0-9]{11}$" ; sh:minCount 1 ;
+                  sh:message "El CUIT tiene 11 dígitos."@es ] .
+
+##### ENDOSO #####
+seg:EndosoShape a sh:NodeShape ;
+    sh:targetClass seg:Endoso ;
+    sh:property [ sh:path seg:endosa ; sh:class seg:Poliza ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "Un endoso modifica exactamente una póliza existente."@es ] ;
+    sh:sparql [
+        sh:message "El endoso quita una cobertura con un siniestro abierto."@es ;
+        sh:select """
+            PREFIX seg: <https://deeptrack.lab/seguros#>
+            SELECT $this WHERE {
+                $this seg:endosa ?p ; seg:quita ?c .
+                ?s seg:poliza ?p ; seg:cobertura ?c ; seg:abierto true .
+            }""" ] .
