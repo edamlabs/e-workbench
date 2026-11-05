@@ -9,18 +9,15 @@ milestones it has reached.
 
 ## [Unreleased]
 
-- labs/deeptrack: the settings law (e-nous `proj-py-layout/references/settings.md`) — clusters
-  `infra/config/{base,infra,providers,ontology,services}.py`, one `Settings`, read only by the root (main, api/app, the
-  lifespans, the cli commands that open them); env snapshot of 31 names held; five gates. `PinnedDotEnvSource` dropped:
-  precedence is kwargs > env > .env for every key, a stale shell `GEMINI_API_KEY` is the shell's to clean. `make check`
-  116 passed; `make integration` needs the ontology MCP servers up (:28101, :28102), not run here.
 ### Added
 
+- Fleet entry `fleet/e-track.toml`: edamlabs/e-track (lib, eager) — deps, security, drift, release, docs,
+  community; the run-tracking library leaves `labs/etrack` for its own repository and PyPI.
 - deeptrack on the settings law (proj-py-layout `references/settings.md`): one `Settings(InfraSettings, ProviderSettings,
   OntologySettings, ServiceSettings)`, UPPERCASE fields named as their variables, no prefixes, no discovery; only the
   root (main, the ASGI app, the lifespans, the cli commands) reads `st`, drivers take keyword arguments. The 31
-  environment names held against a snapshot taken from the old composer; `GEMINI_API_KEY` still read from the `.env`
-  files before a stale shell (a pinned dotenv source). Gates: uppercase, one cluster per name, the snapshot, root-only
+  environment names held against a snapshot taken from the old composer; one precedence for every key (kwargs > env >
+  .env — no pinned dotenv source: a stale shell `GEMINI_API_KEY` is the shell's to clean). Gates: uppercase, one cluster per name, the snapshot, root-only
   reads, types-only below the root — seen red on an injected read. 116 unit, 21 integration, 15 real-model.
 - deeptrack audited against e-nous core 61db22f (`TODO_audit`): no loose helpers left (CLI commands as plain handlers
   over a `ChatSession`, one `lifespan` per module, per-arm assembly as `ArmsService` at `state.services.arms`, the
