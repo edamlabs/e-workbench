@@ -11,6 +11,8 @@ milestones it has reached.
 
 ### Added
 
+- `prek.toml`: `check-yaml` parses every document (`--allow-multiple-documents`): deeptrack's pnpm v10 lockfile is
+  multi-document and failed the gate.
 - Fleet entry `fleet/e-track.toml`: edamlabs/e-track (lib, eager) — deps, security, drift, release, docs,
   community; the run-tracking library leaves `labs/etrack` for its own repository and PyPI.
 - deeptrack on the settings law (proj-py-layout `references/settings.md`): one `Settings(InfraSettings, ProviderSettings,
