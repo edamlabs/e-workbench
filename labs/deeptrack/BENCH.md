@@ -17,7 +17,7 @@ Does the ontology layer make the agent's transactions correct more often than th
 
 The policies' data store (`labs-ontoref`) stays in every arm: it is the database, not the layer under test.
 
-## Cases (`tests/benchmark/deeptrack/cases.json`)
+## Cases (`tests/benchmark/cases.json`)
 
 7 transaction cases, each with one correct outcome:
 - **valid** (2): the run must stop for approval with exactly the expected proposal.
@@ -60,7 +60,7 @@ least 20 transaction cases — n comes from the cases, not from the repeats; r =
 
 ## 2026-11-03 — revision 2, registered before its first run
 
-- **Cases:** 20 transaction cases (8 valid, 12 invalid), `tests/benchmark/deeptrack/cases.json`, over an extended
+- **Cases:** 20 transaction cases (8 valid, 12 invalid), `tests/benchmark/cases.json`, over an extended
   fictitious data set (`ontology/datos.ttl`: pol-3003, pol-4004, an open and a closed claim). Every case's expected
   outcome was checked against the SHACL engine before any agent ran: 20/20 agree.
 - **Unit of analysis:** the case. Per case, the mean over repeats of `full` - `no_ontology`; the 95 % interval is a

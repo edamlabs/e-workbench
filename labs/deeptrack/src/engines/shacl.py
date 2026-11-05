@@ -4,21 +4,16 @@ The server holds one store, so rounds are serialized behind a lock; the engine k
 texts and the shapes. Every call carries the caller's config, so each step is a span under whoever asked."""
 
 import asyncio
-from typing import Protocol
 
 import msgspec
+from beartype import beartype
 from langchain_core.runnables import RunnableConfig
 
 from infra.errors import ShaclError
 from ports.ontology import OntologyPort, ShaclReport
 
 
-class ShaclValidation(Protocol):
-    """What the gate needs from an engine: a candidate in, a report out."""
-
-    async def validate(self, turtle: str, config: RunnableConfig | None = None) -> ShaclReport: ...
-
-
+@beartype
 class ShaclEngine:
     """SHACL over a fresh copy of the ontology plus one candidate graph."""
 
@@ -44,6 +39,7 @@ class ShaclEngine:
             raise ShaclError(msg) from error
 
 
+@beartype
 class PassShaclEngine:
     """The engine of the arm without ontology: it judges nothing — every candidate conforms. Same port, same node."""
 

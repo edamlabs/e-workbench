@@ -143,3 +143,18 @@ class FileFinder:
     ) -> dict[str, Any]:
         """``discover`` off the event loop: the import walk is CPU/IO work, not async I/O."""
         return await anyio.to_thread.run_sync(functools.partial(self.discover, target, pattern=pattern))
+
+
+##### FRONTMATTER #####
+FENCE = "---"
+
+
+def file_frontmatter(text: str) -> tuple[str, str] | None:
+    """A markdown text split into its YAML frontmatter and its body; `None` when it opens with no `---` block."""
+    head, sep, rest = text.partition("\n")
+    match (head.strip() == FENCE, sep):
+        case (True, "\n"):
+            front, closed, body = rest.partition(f"\n{FENCE}\n")
+            return (front, body.strip("\n")) if closed else None
+        case _:
+            return None

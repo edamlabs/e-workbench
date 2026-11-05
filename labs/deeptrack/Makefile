@@ -21,7 +21,7 @@ stack: env        ## restart the lab's stack: down whatever is up (volumes kept)
 
 dev: env          ## the AG-UI server (Granian, reload) on 127.0.0.1:$(SERVER_PORT); `make down` stops it
 	@echo $$$$ > .dev.pid; exec uv run granian --interface asgi --host 127.0.0.1 --port $(SERVER_PORT) \
-		--reload --reload-paths src deeptrack.api.app:app
+		--reload --reload-paths src api.app:app
 
 down: env         ## stop everything, up or not: the dev server and the stack (volumes kept)
 	@test -f .dev.pid && kill $$(cat .dev.pid) 2>/dev/null; rm -f .dev.pid
@@ -47,10 +47,13 @@ integration:      ## scripted turns against the live stack (make stack first), n
 	uv run pytest -q -p no:tach -m "integration and not llm"
 
 bench:            ## the ontology A/B (BENCH.md) on the real model; R=2 repeats, ARMS="full prevalidate", RESUME=reports/ab-….jsonl to continue
-	uv run python tests/benchmark/deeptrack/ab.py --repeats $(or $(R),2) $(foreach arm,$(ARMS),--arms $(arm)) $(if $(RESUME),--resume $(RESUME),)
+	uv run python -m tests.benchmark.ab --repeats $(or $(R),2) $(foreach arm,$(ARMS),--arms $(arm)) $(if $(RESUME),--resume $(RESUME),)
 
 questions:        ## PREGUNTAS.md on the real model and the live stack — structural assertions
-	uv run pytest -q -p no:tach -m llm -rA
+	uv run pytest -q -p no:tach -m "llm and not evaluation" -rA
+
+eval:             ## the agents judged on the holdout cases (SPLIT=train for the rest), 3 runs each, real model and stack
+	SPLIT=$(or $(SPLIT),holdout) uv run pytest tests/evaluation -q -p no:tach -m evaluation -rA
 
 check: lint types arch test ## the full local gate
 
@@ -60,4 +63,4 @@ tools:            ## each ontology server's tools and schemas
 chat:             ## talk to the agents (needs Vertex creds: see .env.example)
 	uv run deeptrack chat
 
-.PHONY: help sync env stack dev down questions bench purge lint types arch test integration check tools chat
+.PHONY: help sync env stack dev down questions eval bench purge lint types arch test integration check tools chat

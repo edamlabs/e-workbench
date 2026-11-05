@@ -1,20 +1,16 @@
-"""Shared fixtures: scripted turns and a sink that keeps every frame."""
+"""Shared fixtures: scripted turns and the real tree the stack-bound tiers run on."""
 
+from collections.abc import AsyncIterator
 from datetime import date
 
 import pytest
 from langchain_core.messages import AIMessage
 
-from processors.models import RunEvent
+from infra.lifespan.sealed import lifespan
+from infra.state import State
 from tests.support.fake import call
 
 PROPOSAL = {"poliza": "pol-1001", "cobertura": "cob-rc", "fecha_ocurrencia": date(2026, 7, 1).isoformat()}
-
-
-@pytest.fixture
-def frames() -> list[RunEvent]:
-    """Every frame a sink received, in arrival order."""
-    return []
 
 
 @pytest.fixture
@@ -26,3 +22,10 @@ def proposing() -> tuple[AIMessage, ...]:
         AIMessage("Propuesta registrada."),
         AIMessage("He preparado la denuncia; queda pendiente de validación y aprobación."),
     )
+
+
+@pytest.fixture
+async def state() -> AsyncIterator[State]:
+    """The real lifespan's sealed tree, opened for one test and closed after it."""
+    async with lifespan() as tree:
+        yield tree

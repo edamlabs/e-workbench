@@ -203,6 +203,7 @@ services:
       COPILOTKIT_TELEMETRY_DISABLED: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       DEEPTRACK_AGENT_URL: http://127.0.0.1:${LABS_SERVER_PORT:-28103}/agui
+      NEXT_PUBLIC_DEEPTRACK_VIEWER_URL: http://127.0.0.1:${LABS_SERVER_PORT:-28103}/etrack
     command: sh -c "corepack pnpm install --frozen-lockfile && corepack pnpm exec next dev -H 127.0.0.1 -p ${LABS_AGUI_PORT:-28104}"
     volumes:
       - ./ui:/app

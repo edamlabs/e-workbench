@@ -40,6 +40,22 @@ class OntologyError(DriverError):
 
 
 ##### ENGINES #####
+class HarnessError(DriverError):
+    """The agents directory breaks the contract: `law` names the rule, `path` the file that breaks it."""
+
+    def __init__(self, law: str, path: str, message: str) -> None:
+        super().__init__(f"{law} · {path}: {message}")
+        self.law, self.path = law, path
+
+
+class AgentError(AdapterError):
+    """A roster the agent framework cannot build: `law` names the rule, `agent` the agent that breaks it."""
+
+    def __init__(self, law: str, agent: str, message: str) -> None:
+        super().__init__(f"{law} · {agent}: {message}")
+        self.law, self.agent = law, agent
+
+
 class EngineError(CoreError):
     """An engine refused a request before touching any resource."""
 

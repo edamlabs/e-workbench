@@ -5,7 +5,7 @@ import json
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any, ClassVar, Self
 
-from langchain_core.callbacks import BaseCallbackHandler, CallbackManagerForLLMRun
+from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
@@ -117,36 +117,6 @@ class FakeOntology:
                 return json.dumps({"conforms": conforms, "violation_count": len(broken), "violations": broken})
             case _:
                 return "{}"
-
-
-class FakeTrace:
-    """A `TracePort` that records nothing: derived ids, a handler that listens to nothing, a session marker."""
-
-    spec: ClassVar[ProviderSpec] = ProviderSpec("fake", Locality.EMBEDDED, Workload.CPU_BOUND, Isolation.LOOP)
-
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(self, *exc: object) -> None:
-        return None
-
-    async def health(self) -> bool:
-        return True
-
-    def trace_id(self, run_id: str) -> str:
-        return f"trace-{run_id}"
-
-    def handler(self, run_id: str) -> BaseCallbackHandler:
-        return BaseCallbackHandler()
-
-    def url(self, trace_id: str) -> str:
-        return f"http://trace/{trace_id}"
-
-    def session(self, thread: str) -> dict[str, str]:
-        return {"session": thread}
-
-    async def flush(self) -> None:
-        return None
 
 
 class ToolOntology(FakeOntology):

@@ -1,4 +1,4 @@
-"""providers/drivers/classify/gemini: GeminiClassifyDriver — one label out of a closed set, by Gemini Flash-Lite.
+"""providers/drivers/classify/gemini: ClassifyGeminiDriver — one label out of a closed set, by Gemini Flash-Lite.
 
 The model answers under a JSON schema whose only field is an enum of the labels: it cannot say anything else. A
 library failure (network, quota, a refused key) is a `ModelError` at this border."""
@@ -7,26 +7,31 @@ from typing import Any, ClassVar, Self
 
 from langchain_core.runnables import RunnableConfig
 from langchain_google_genai._common import GoogleGenerativeAIError
+from pydantic import SecretStr
 
-from infra.config.providers.drivers.classify.gemini import GeminiClassifySettings
+from infra.config.providers import ThinkingLevel
 from infra.errors import ModelError
 from infra.logger import logger
-from infra.settings import settings as st
 from ports.provider import Isolation, Locality, ProviderSpec, Workload
 from providers.drivers.chat.google import ChatGoogle
 
 
-class GeminiClassifyDriver:
+class ClassifyGeminiDriver:
     """The classifier behind `ClassifyPort`."""
 
     spec: ClassVar[ProviderSpec] = ProviderSpec(
         "gemini-classify", Locality.REMOTE, Workload.IO_BOUND, Isolation.LOOP, pooled=True
     )
 
-    __slots__ = ("_model", "_settings")
+    __slots__ = ("_api_key", "_model", "_ref", "_thinking", "_timeout")
 
-    def __init__(self, settings: GeminiClassifySettings | None = None) -> None:
-        self._settings = settings
+    def __init__(
+        self, *, ref: str, api_key: SecretStr, thinking: ThinkingLevel | None = None, timeout: float = 10.0
+    ) -> None:
+        self._ref = ref
+        self._api_key = api_key
+        self._thinking = thinking
+        self._timeout = timeout
         self._model: ChatGoogle | None = None
 
     @staticmethod
@@ -41,16 +46,15 @@ class GeminiClassifyDriver:
     ############################################################
 
     async def __aenter__(self) -> Self:
-        config: GeminiClassifySettings = self._settings or st.providers.drivers.classify.gemini
-        match config.api_key.get_secret_value():
+        match self._api_key.get_secret_value():
             case "":
                 msg = "gemini-classify: no GEMINI_API_KEY in the repository's or the lab's .env"
                 raise ModelError(msg)
             case key:
-                options: dict[str, Any] = {"api_key": key, "vertexai": False, "timeout": config.timeout}
-                options |= {"thinking_level": str(config.thinking_level)} if config.thinking_level else {}
-                self._model = ChatGoogle(model=config.ref.removeprefix("google_genai:"), **options)
-        logger.info("classify open", driver="gemini", model=config.ref)
+                options: dict[str, Any] = {"api_key": key, "vertexai": False, "timeout": self._timeout}
+                options |= {"thinking_level": str(self._thinking)} if self._thinking else {}
+                self._model = ChatGoogle(model=self._ref.removeprefix("google_genai:"), **options)
+        logger.info("classify open", driver="gemini", model=self._ref)
         return self
 
     async def __aexit__(self, *exc: object) -> None:

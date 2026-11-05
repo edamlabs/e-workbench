@@ -17,9 +17,8 @@ from structlog.typing import (
     WrappedLogger,
 )
 
-from infra.config.app import Env
+from infra.config.infra import Env
 from infra.proxy import LazyProxy
-from infra.settings import settings as st
 
 
 ##### TYPES #####
@@ -148,14 +147,15 @@ class ELogger:
 
     @classmethod
     def load(cls) -> Any:
-        """The process logger: setup with the app env runs here, on first use, never at import.
+        """The process logger: setup runs here, on first use, never at import — with the defaults, unless the composition
+        root, which reads APP_ENV, called `setup` first.
 
         `bind()` materializes the lazy proxy structlog hands back.
         ### the bound-logger class is polymorphic across structlog's stdlib/native wrapper variants:
         ### the surface is structlog's own untyped edge."""
         match cls._configured:
             case False:
-                cls.setup(env=st.app.env)
+                cls.setup()
             case _:
                 pass
         return structlog.get_logger().bind()
