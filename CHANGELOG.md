@@ -9,6 +9,11 @@ milestones it has reached.
 
 ## [Unreleased]
 
+- labs/deeptrack: the settings law (e-nous `proj-py-layout/references/settings.md`) — clusters
+  `infra/config/{base,infra,providers,ontology,services}.py`, one `Settings`, read only by the root (main, api/app, the
+  lifespans, the cli commands that open them); env snapshot of 31 names held; five gates. `PinnedDotEnvSource` dropped:
+  precedence is kwargs > env > .env for every key, a stale shell `GEMINI_API_KEY` is the shell's to clean. `make check`
+  116 passed; `make integration` needs the ontology MCP servers up (:28101, :28102), not run here.
 ### Added
 
 - deeptrack on the settings law (proj-py-layout `references/settings.md`): one `Settings(InfraSettings, ProviderSettings,

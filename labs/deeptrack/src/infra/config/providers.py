@@ -7,7 +7,7 @@ are the compose's; the agents directory is data outside the code. etrack's sinks
 import base64
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, ClassVar, Final
+from typing import Annotated, Final
 
 from pydantic import Field, PositiveFloat, SecretStr
 
@@ -45,9 +45,6 @@ class SinkKind(StrEnum):
 ##### SETTINGS #####
 class ProviderSettings(BaseSettings):
     """One block per driver and adapter."""
-
-    ### the key a stale shell must not override: the repository's or the lab's `.env` wins.
-    PINNED: ClassVar[frozenset[str]] = frozenset({"GEMINI_API_KEY"})
 
     ##### DRIVERS #####
 
