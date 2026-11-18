@@ -32,3 +32,6 @@ fleet:            ## list the projects under maintenance
 
 run:              ## dry run of one project: make run P=rtrafilatura
 	GH_TOKEN="$$(gh auth token)" uv run e-workbench run $(P)
+
+changelog: ## fold the done branches' .ergon/changelog fragments into CHANGELOG.md and open the fold PR
+	@taxis changelog fold --pr --yes
