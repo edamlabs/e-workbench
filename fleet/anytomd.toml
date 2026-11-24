@@ -25,6 +25,19 @@ repo = "https://github.com/tokio-rs/tokio"
 registry = "https://crates.io/crates/tokio"
 license = "MIT"
 
+### The OCR engine linked into the wheel since 1.5.0: oar-ocr pins ort exactly, ort pins the ONNX Runtime it downloads.
+[[deps.watch]]
+name = "oar-ocr"
+repo = "https://github.com/GreatV/oar-ocr"
+registry = "https://crates.io/crates/oar-ocr"
+license = "Apache-2.0"
+
+[[deps.watch]]
+name = "ort"
+repo = "https://github.com/pykeio/ort"
+registry = "https://crates.io/crates/ort"
+license = "MIT OR Apache-2.0"
+
 [upstream]
 
 [[upstream.engines]]
